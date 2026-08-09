@@ -1,0 +1,21 @@
+name: Validate shared automation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ops-workflows-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  public-baseline:
+    uses: ./.github/workflows/public-repo-baseline.yml
+    with:
+      forbid_self_hosted: true

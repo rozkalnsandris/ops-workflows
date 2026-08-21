@@ -19,3 +19,52 @@ jobs:
     uses: ./.github/workflows/public-repo-baseline.yml
     with:
       forbid_self_hosted: true
+
+  fast-lane-policy:
+    name: FAST-LANE policy contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Validate canonical policy files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          policy_path = Path('policy/fast-lane-v2.1.json')
+          doc_path = Path('docs/FAST_LANE_V2_1_HYBRID.md')
+          template_path = Path('.github/pull_request_template.md')
+          agents_path = Path('AGENTS.md')
+
+          for path in (policy_path, doc_path, template_path, agents_path):
+              if not path.is_file() or path.stat().st_size == 0:
+                  raise SystemExit(f'missing FAST-LANE contract file: {path}')
+
+          policy = json.loads(policy_path.read_text(encoding='utf-8'))
+          expected = {
+              'schema_version': 1,
+              'policy': 'FAST-LANE v2.1 Hybrid',
+              'canonical_repository': 'rozkalnsandris/ops-workflows',
+              'lanes': ['FAST', 'STRICT'],
+          }
+          for key, value in expected.items():
+              if policy.get(key) != value:
+                  raise SystemExit(f'FAST-LANE policy mismatch: {key}')
+          if policy.get('fast', {}).get('max_related_work_items') != 5:
+              raise SystemExit('FAST-LANE related-work bound changed')
+          if policy.get('fast', {}).get('max_scope_preserving_corrective_commits') != 2:
+              raise SystemExit('FAST-LANE corrective-commit bound changed')
+          if policy.get('ci', {}).get('stable_merge_gate_name') != 'FAST-LANE Merge Gate':
+              raise SystemExit('FAST-LANE merge gate name changed')
+
+          doc = doc_path.read_text(encoding='utf-8')
+          for marker in ('## Two operator lanes', '## Related-work batching', '## Merge and live mutations'):
+              if marker not in doc:
+                  raise SystemExit(f'missing policy section: {marker}')
+          print('FAST_LANE_POLICY=PASS')
+          PY

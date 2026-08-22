@@ -1,6 +1,8 @@
 # FAST-LANE v2.2 Composite — canonical cross-project policy
 
 > Compatibility path: this file keeps the v2.1 filename because adopting repositories already point here. Its contents are the authoritative FAST-LANE v2.2 policy.
+>
+> **Why v2.2 exists:** read `docs/FAST_LANE_V2_2_DECISION_RECORD.md` for the migration rationale, Control Center evidence, rejected micro-gate model, 2026-08-22 rollout history, and external platform alignment.
 
 ## Core rule
 

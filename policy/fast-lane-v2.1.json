@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "policy": "FAST-LANE v2.1 Hybrid",
+  "canonical_repository": "rozkalnsandris/ops-workflows",
+  "lanes": ["FAST", "STRICT"],
+  "fast": {
+    "max_related_work_items": 5,
+    "max_scope_preserving_corrective_commits": 2,
+    "stop_at": "READY",
+    "forbidden_authority": [
+      "merge",
+      "production_deploy",
+      "production_database_write_or_migration",
+      "host_or_root_mutation",
+      "service_activation_or_restart",
+      "secrets_or_credentials",
+      "cloudflare_production_mutation",
+      "firmware_flash_or_ota",
+      "physical_actuation",
+      "other_live_write"
+    ]
+  },
+  "strict": {
+    "separate_owner_authorization_required": true,
+    "error_after_mutation_start": "PRESERVE_EVIDENCE_AND_STOP"
+  },
+  "ci": {
+    "workflow_level_path_skip_for_required_checks": false,
+    "prefer_job_level_conditions": true,
+    "stable_merge_gate_name": "FAST-LANE Merge Gate",
+    "preserve_exact_main_push_ci_when_release_contract_requires_it": true
+  },
+  "evidence": {
+    "ready_receipt_once": true,
+    "merge_refresh_mutable_state_only": true,
+    "single_current_continuity_pointer_when_useful": true
+  },
+  "precedence": "repository_local_stricter_rules_win"
+}

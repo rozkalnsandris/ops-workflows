@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "policy": "FAST-LANE v2.2 Composite",
+  "canonical_repository": "rozkalnsandris/ops-workflows",
+  "principle": "HUMAN_APPROVES_RISK_OR_DECISION_AUTOMATION_EXECUTES_TECHNICAL_STEPS",
+  "lanes": ["FAST", "STRICT"],
+  "fast": {
+    "max_related_work_items": 5,
+    "max_scope_preserving_corrective_commits": 2,
+    "stop_at": "READY_FOR_MERGE",
+    "continuation_may_reach_ready": true
+  },
+  "human_gate_budget": {
+    "normal_max_owner_gates": 2,
+    "gates": ["MERGE", "COMPOSITE_LIVE_IF_REQUIRED"],
+    "read_only_checkpoint_creates_owner_gate": false
+  },
+  "composite_live": {
+    "bind_exact_git_sha": true,
+    "bind_exact_target": true,
+    "enumerate_allowed_mutation_categories": true,
+    "enumerate_explicit_exclusions": true,
+    "hard_operation_limits_when_practical": true,
+    "fail_closed_on_sha_target_or_baseline_drift": true,
+    "preflight_is_part_of_one_shot": true,
+    "candidate_verification_is_automatic": true,
+    "build_once_deploy_exact_verified_artifact_when_supported": true,
+    "concurrency_or_drift_guard": true,
+    "project_pinned_toolchain": true
+  },
+  "mutation_failure": {
+    "authorization_consumed_at_first_mutation": true,
+    "behavior": "PRESERVE_EVIDENCE_AND_STOP",
+    "automatic_retry": false,
+    "automatic_rollback": false,
+    "automatic_cleanup": false,
+    "alternate_mutation_path": false
+  },
+  "evidence": {
+    "ready_receipt_once": true,
+    "final_live_receipt_once": true,
+    "intermediate_output_owner_shuttle": false,
+    "decision_at_end": true,
+    "copyable_bash_action_when_owner_input_required": true
+  },
+  "merge": {
+    "explicit_owner_decision": true,
+    "authorizes_live_mutation": false
+  },
+  "precedence": "repository_local_stricter_trust_boundary_rules_win"
+}

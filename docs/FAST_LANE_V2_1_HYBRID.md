@@ -1,97 +1,110 @@
-# FAST-LANE v2.1 Hybrid
+# FAST-LANE v2.2 Composite — canonical cross-project policy
 
-This is the canonical cross-project delivery policy for repositories owned by `rozkalnsandris`.
+> Compatibility path: this file keeps the v2.1 filename because adopting repositories already point here. Its contents are the authoritative FAST-LANE v2.2 policy.
 
-## Goal
+## Core rule
 
-Shorten the path from a clear task to a reviewed result without weakening production, host, credential, data-write, or trust-boundary gates. Repository-local rules may be stricter; a local stricter rule always wins.
+**The human approves the RISK / DECISION. Automation executes the TECHNICAL STEPS.**
 
-## Two operator lanes
+STRICT describes mutation risk, not the number of human interactions. Read-only checkpoints MUST NOT create owner gates.
 
-### FAST
+Repository-local stricter trust-boundary rules still win.
 
-Use FAST for source-only work that does not create or activate a new trust boundary or live capability. Typical examples are documentation, tests, UI/source changes, parsers, deterministic refactors, and other changes whose effects remain inside Git/CI until a later separately authorized action.
+## FAST source envelope
 
-A FAST authorization may cover one coherent execution batch from fresh repository state through Ready for review:
+For source-only work, `START`, `turpini`, or an equivalent continuation instruction may proceed in one coherent batch from fresh canonical GitHub state through Ready:
 
-`fresh state -> one branch -> implementation -> focused validation -> push -> Draft PR -> selective CI -> bounded corrections -> relevant Ready validation -> one Ready receipt -> STOP`
+`fresh state -> branch -> implementation -> focused validation -> push -> Draft PR -> CI/review -> up to 2 scope-preserving corrections -> Ready receipt -> STOP for merge`
 
-FAST never authorizes merge, production deployment, production database writes/migrations, host/root mutation, service activation/restart, secrets/credentials, Cloudflare mutation, firmware flash/OTA, physical actuation, or another live write.
+FAST may batch 2-5 closely related same-risk work items when they form one reviewable acceptance story. FAST never authorizes merge or a live mutation.
 
-### STRICT
+## Human gate budget
 
-Use STRICT when work reaches a live/runtime authority boundary or changes the mechanism that can reach one. Examples include production deploy/apply, database migration/write, host/root/systemd/Docker/network changes, credential or secret operations, Cloudflare production changes, retained-evidence writes, self-hosted-runner authority, firmware flash/OTA, live MQTT/device commands, or first activation of a privileged capability.
+The normal end-to-end delivery path has at most two owner decision gates:
 
-Source code that prepares a future STRICT operation may still be developed in a source-only PR, but activation remains separately authorized.
+1. **MERGE** — explicit authorization to merge the exact Ready PR/head.
+2. **COMPOSITE LIVE** — only when a deploy/host/device/account/data mutation is actually required.
 
-## Related-work batching
+Do not invent separate owner gates for CI polling, GET/preflight, evidence refresh, diff inspection, checkout discovery, clean/ancestor checks, build preparation, candidate verification, reconciliation, or other read-only work.
 
-A FAST PR may combine 2-5 closely related work items when all of the following hold:
+A new STOP is justified only when:
 
-- one subsystem or coherent acceptance story;
-- the same risk class;
-- no new trust boundary;
-- no production/live mutation;
-- review remains understandable as one change.
+- merge authorization is required;
+- one composite live authorization is required;
+- an authorized mutation has started and an error/ambiguous result occurs;
+- a new scope, trust-boundary, target, SHA, or risk class appears.
 
-Do not batch unrelated cleanup or mix a low-risk change with a first-time privileged capability merely to reduce PR count.
+## Composite STRICT authorization envelope
 
-## Bounded corrective commits
+Before requesting a live authorization, collect all obtainable read-only evidence. Ask once for one bounded execution envelope that states:
 
-After the first successful publication of a FAST branch/PR, up to two scope-preserving corrective commits may be made without a new owner authorization when CI or review proves a defect inside the already authorized scope.
+- repository and exact approved Git SHA/ref;
+- exact live target/environment/device/account;
+- allowed mutation categories;
+- hard mutation-count or operation limits where practical;
+- explicit exclusions;
+- expected pre-mutation production/runtime baseline when relevant.
 
-STOP for new authorization if:
+One authorization may cover multiple tightly coupled mutation categories needed for one rollout, for example a trusted local checkout `git fetch` + `git merge --ff-only` followed by one bounded production rollout. It does not authorize `reset`, `rebase`, `clean`, force operations, secrets, permissions, unrelated host changes, DB/Queue mutations, or any category not named in the envelope.
 
-- a third corrective commit is required;
-- the intended scope expands materially;
-- a migration, permission, secret, runtime, host, production, or trust-boundary change appears;
-- a GitHub write itself returns an ambiguous or failed result.
+If the approved SHA/target/baseline changes before the mutation, fail closed and STOP. Never silently deploy a newer `main` than the owner approved.
 
-A test failure is validation evidence, not permission to broaden scope.
+## One-shot execution
 
-## CI model
+After Composite Live authorization, automation should execute one fail-closed controller/script rather than returning to the owner for technical checkpoints.
 
-Workflows should start normally and classify changed files inside the workflow. Prefer job-level conditions over top-level `paths`/`paths-ignore` for checks that may become required.
+The one-shot sequence should include, as applicable:
 
-Recommended layers:
+1. exact GitHub/main/CI evidence;
+2. production/runtime baseline read;
+3. local checkout clean/ancestor validation;
+4. allowed `fetch` + `merge --ff-only` sync when required;
+5. revalidation of approved SHA and baseline immediately before first live write;
+6. deterministic build with project-pinned toolchain;
+7. build once / upload or create one exact artifact/version;
+8. automated candidate/read-only verification;
+9. concurrency/drift guard immediately before rollout;
+10. one bounded rollout of the exact verified artifact/version;
+11. GET/read-only reconciliation;
+12. one final receipt.
 
-1. `classify` - deterministic changed-file/risk classification;
-2. FAST feedback - syntax/static/focused affected tests;
-3. Ready validation - full relevant subsystem acceptance;
-4. `FAST-LANE Merge Gate` - one stable final status over required jobs.
+When the platform supports immutable versions/artifacts, deploy the exact verified version; do not rebuild between candidate verification and rollout.
 
-Skipped-by-design jobs are acceptable only when the classifier proves they are irrelevant. Security/policy checks that protect public information, credentials, workflow authority, or a release trust contract must not be skipped merely for speed.
+## Failure and rollback
 
-A repository may keep full CI on every `main` push when deployment or release authorization depends on exact-main push evidence.
+Authorization is consumed when the first authorized mutation starts. After that point, any error, ambiguity, unexpected drift, or scope expansion requires evidence preservation and STOP.
 
-## Evidence and continuity
+Default behavior is **no automatic retry, rollback, cleanup, alternate mutation path, reset, or rebase**. Such behavior is allowed only when the exact operation contract explicitly pre-authorized it and its safety prerequisites were proven before the first mutation.
 
-Do not repeat a full mutable-state receipt after every micro-step.
+## Concurrency and drift
 
-Create one Ready receipt containing at least:
+Only one bounded live rollout should own a target at a time. Immediately before a live write, re-read the expected authoritative baseline when the platform exposes it. If another actor changed the target, STOP instead of adapting automatically.
 
-- lane and related work;
-- base and exact head SHA;
-- reviewed diff/scope;
-- relevant CI/check results;
-- unresolved review-thread count;
-- runtime/deploy/migration/trust-boundary classification;
-- exact next gate.
+## Toolchain determinism
 
-Immediately before merge, refresh only mutable merge evidence: current base/main, exact PR head, mergeability, CI/checks, reviews/threads, and policy state.
+Production/release tooling must be repository-pinned or otherwise exact-version controlled where practical. Do not fetch an unpinned latest deployment CLI during the live rollout.
 
-Each project should maintain one concise CURRENT continuity location when continuity is useful. Update it at meaningful gate/phase transitions, not after every commit. PRs, issues, CI and immutable artifacts remain the detailed evidence sources.
+## Evidence
 
-## Merge and live mutations
+Use one Ready receipt for source work and one final live receipt after a Composite Live execution. Do not ask the owner to shuttle intermediate command output unless execution has genuinely stopped.
 
-Merge always requires an explicit owner merge instruction unless a repository has a separately authorized and technically enforced exact-head auto-merge policy.
+A live receipt should record at least:
 
-Merge authorization does not authorize deployment, migration, retained-data writes, host mutation, secrets, Cloudflare changes, firmware activation, or another live mutation.
+- result and failed stage if any;
+- approved and observed Git SHA;
+- target and before/after baseline/version;
+- allowed mutations and actual mutation counts;
+- candidate verification and reconciliation result;
+- whether first mutation started / authorization was consumed;
+- whether production/runtime changed;
+- exact next human decision, if one exists.
 
-After an authorized live mutation starts, any error or ambiguous outcome requires evidence preservation and STOP. Do not retry, roll back, clean up, or choose an alternate mutation path without new authorization unless the exact operation contract explicitly pre-authorized that behavior.
+## Operator UX
 
-## Cross-project consistency
+Human decisions must be visually separated at the **end** of the report. First report what was completed, evidence and any blocker; then show one `ACTION REQUIRED` section only if a real owner decision remains.
 
-All adopting repositories use the same external terms (`FAST`, `STRICT`, Ready receipt, bounded corrections, explicit merge gate). Project-specific examples and CI classifiers remain local because a parser, web UI, Home Assistant config, Cloudflare Worker, RPi host repo, and ESP32 firmware do not share the same runtime risk boundary.
+When the owner must run or enter something, provide the exact copyable command/authorization in a fenced `bash` block. Do not bury the requested action inside explanatory prose.
 
-The machine-readable defaults are in `policy/fast-lane-v2.1.json`. Repository-local policy may only tighten these defaults unless an owner explicitly changes this canonical standard.
+## Merge invariant
+
+Merge remains an explicit owner decision and never authorizes deployment, database writes/migrations, host/root mutation, service activation, secrets/credentials, Cloudflare mutation, firmware activation, physical actuation, external-account mutation, or another live write.

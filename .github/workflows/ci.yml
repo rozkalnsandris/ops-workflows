@@ -36,7 +36,7 @@ jobs:
           import json
           from pathlib import Path
 
-          policy_path = Path('policy/fast-lane-v2.1.json')
+          policy_path = Path('policy/fast-lane-v2.2.json')
           doc_path = Path('docs/FAST_LANE_V2_1_HYBRID.md')
           template_path = Path('.github/pull_request_template.md')
           agents_path = Path('AGENTS.md')
@@ -47,9 +47,10 @@ jobs:
 
           policy = json.loads(policy_path.read_text(encoding='utf-8'))
           expected = {
-              'schema_version': 1,
-              'policy': 'FAST-LANE v2.1 Hybrid',
+              'schema_version': 2,
+              'policy': 'FAST-LANE v2.2 Composite',
               'canonical_repository': 'rozkalnsandris/ops-workflows',
+              'principle': 'HUMAN_APPROVES_RISK_OR_DECISION_AUTOMATION_EXECUTES_TECHNICAL_STEPS',
               'lanes': ['FAST', 'STRICT'],
           }
           for key, value in expected.items():
@@ -59,11 +60,29 @@ jobs:
               raise SystemExit('FAST-LANE related-work bound changed')
           if policy.get('fast', {}).get('max_scope_preserving_corrective_commits') != 2:
               raise SystemExit('FAST-LANE corrective-commit bound changed')
-          if policy.get('ci', {}).get('stable_merge_gate_name') != 'FAST-LANE Merge Gate':
-              raise SystemExit('FAST-LANE merge gate name changed')
+          if policy.get('human_gate_budget', {}).get('normal_max_owner_gates') != 2:
+              raise SystemExit('FAST-LANE human gate budget changed')
+          if policy.get('human_gate_budget', {}).get('read_only_checkpoint_creates_owner_gate') is not False:
+              raise SystemExit('FAST-LANE read-only gate invariant changed')
+          if policy.get('composite_live', {}).get('preflight_is_part_of_one_shot') is not True:
+              raise SystemExit('FAST-LANE one-shot preflight invariant changed')
+          if policy.get('mutation_failure', {}).get('automatic_retry') is not False:
+              raise SystemExit('FAST-LANE automatic retry invariant changed')
+          if policy.get('mutation_failure', {}).get('automatic_rollback') is not False:
+              raise SystemExit('FAST-LANE automatic rollback invariant changed')
+          if policy.get('evidence', {}).get('decision_at_end') is not True:
+              raise SystemExit('FAST-LANE owner decision placement changed')
 
           doc = doc_path.read_text(encoding='utf-8')
-          for marker in ('## Two operator lanes', '## Related-work batching', '## Merge and live mutations'):
+          for marker in (
+              '## Core rule',
+              '## Human gate budget',
+              '## Composite STRICT authorization envelope',
+              '## One-shot execution',
+              '## Failure and rollback',
+              '## Operator UX',
+              '## Merge invariant',
+          ):
               if marker not in doc:
                   raise SystemExit(f'missing policy section: {marker}')
           print('FAST_LANE_POLICY=PASS')

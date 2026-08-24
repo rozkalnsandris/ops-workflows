@@ -20,8 +20,11 @@ The core operating rule is:
 - CI polling, GET/preflight, evidence refresh, diff inspection, checkout discovery, clean/ancestor checks, build preparation, candidate verification, reconciliation, and other read-only steps do not create owner gates.
 - A FAST PR may batch 2–5 closely related same-risk work items when they form one coherent acceptance story.
 - Up to two scope-preserving corrective commits may follow CI/review findings inside the original FAST authorization. A third correction or scope/risk expansion requires STOP and new authorization.
+- Three failed technical attempts for the same objective — the initial attempt plus at most two scope-preserving corrections — are a hard STOP before a fourth attempt.
 - Use one Ready receipt; refresh mutable state again immediately before merge.
 - Composite Live authority must bind exact SHA/ref, exact target, allowed mutation categories, explicit exclusions, and baseline/operation limits where practical.
+- Candidate verification must prove that the observed candidate identity equals the exact uploaded artifact/version identity. HTTP success alone is insufficient when routing can fall back to another active version.
+- When a platform requires a candidate to be attached to the active deployment before exact-version verification, a pre-enumerated zero-normal-traffic attachment plus later promotion may share one Composite Live owner gate. Both remain separate live mutations and must be counted and bounded in the authorization envelope.
 - Authorization is consumed when the first authorized mutation starts. After that, error, ambiguity, drift, or new risk means preserve evidence and STOP; do not automatically retry, rollback, clean up, rebase, reset, or choose an alternate mutation path unless that behavior was explicitly pre-authorized.
 - When an owner decision remains, report status first and place one visible `ACTION REQUIRED` section at the end, using a copyable fenced `bash` block when practical.
 - Merge remains explicit owner authority. Merge does not authorize deployment or any other live mutation.

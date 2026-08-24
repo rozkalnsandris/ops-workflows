@@ -24,9 +24,16 @@
     "fail_closed_on_sha_target_or_baseline_drift": true,
     "preflight_is_part_of_one_shot": true,
     "candidate_verification_is_automatic": true,
+    "candidate_identity_must_match_exact_uploaded_artifact": true,
+    "zero_normal_traffic_candidate_attachment_allowed_when_platform_requires": true,
+    "pre_enumerated_multi_step_live_sequence_may_share_one_composite_gate": true,
     "build_once_deploy_exact_verified_artifact_when_supported": true,
     "concurrency_or_drift_guard": true,
     "project_pinned_toolchain": true
+  },
+  "technical_attempt_limit": {
+    "initial_attempt_plus_scope_preserving_corrections_max": 3,
+    "stop_before_fourth_attempt": true
   },
   "mutation_failure": {
     "authorization_consumed_at_first_mutation": true,

@@ -20,6 +20,8 @@ For source-only work, `START`, `turpini`, or an equivalent continuation instruct
 
 FAST may batch 2-5 closely related same-risk work items when they form one reviewable acceptance story. FAST never authorizes merge or a live mutation.
 
+Three failed technical attempts for the same objective — the initial attempt plus at most two scope-preserving corrections — are a hard STOP before a fourth attempt.
+
 ## Human gate budget
 
 The normal end-to-end delivery path has at most two owner decision gates:
@@ -49,6 +51,8 @@ Before requesting a live authorization, collect all obtainable read-only evidenc
 
 One authorization may cover multiple tightly coupled mutation categories needed for one rollout, for example a trusted local checkout `git fetch` + `git merge --ff-only` followed by one bounded production rollout. It does not authorize `reset`, `rebase`, `clean`, force operations, secrets, permissions, unrelated host changes, DB/Queue mutations, or any category not named in the envelope.
 
+If a target platform requires the candidate version to be present in the active deployment before exact-version verification is possible, the same Composite Live authorization may explicitly enumerate a zero-normal-traffic candidate attachment followed by candidate verification and later promotion. The attachment and promotion are separate live mutations and both must be counted and bounded in the authorization envelope; they do not create separate owner gates merely because the platform requires two deployment writes.
+
 If the approved SHA/target/baseline changes before the mutation, fail closed and STOP. Never silently deploy a newer `main` than the owner approved.
 
 ## One-shot execution
@@ -64,11 +68,15 @@ The one-shot sequence should include, as applicable:
 5. revalidation of approved SHA and baseline immediately before first live write;
 6. deterministic build with project-pinned toolchain;
 7. build once / upload or create one exact artifact/version;
-8. automated candidate/read-only verification;
-9. concurrency/drift guard immediately before rollout;
-10. one bounded rollout of the exact verified artifact/version;
-11. GET/read-only reconciliation;
-12. one final receipt.
+8. capture the exact artifact/version identity;
+9. if required by the platform, attach the exact candidate to the active deployment at zero normal traffic while preserving the approved baseline;
+10. automatically route a candidate verification request to the exact candidate and require the observed candidate identity to equal the uploaded artifact/version identity;
+11. re-read production baseline/deployment state and enforce the concurrency/drift guard;
+12. perform the bounded promotion/rollout of the exact verified artifact/version;
+13. GET/read-only reconciliation, including exact post-rollout identity when available;
+14. one final receipt.
+
+HTTP success alone is not sufficient candidate proof when a failed version override or routing rule can fall back to another active version.
 
 When the platform supports immutable versions/artifacts, deploy the exact verified version; do not rebuild between candidate verification and rollout.
 
@@ -77,6 +85,8 @@ When the platform supports immutable versions/artifacts, deploy the exact verifi
 Authorization is consumed when the first authorized mutation starts. After that point, any error, ambiguity, unexpected drift, or scope expansion requires evidence preservation and STOP.
 
 Default behavior is **no automatic retry, rollback, cleanup, alternate mutation path, reset, or rebase**. Such behavior is allowed only when the exact operation contract explicitly pre-authorized it and its safety prerequisites were proven before the first mutation.
+
+A failed candidate verification after a zero-normal-traffic attachment does not authorize automatic removal of that candidate; removal would be another live mutation and requires explicit pre-authorization or a new owner decision.
 
 ## Concurrency and drift
 
@@ -96,6 +106,7 @@ A live receipt should record at least:
 - approved and observed Git SHA;
 - target and before/after baseline/version;
 - allowed mutations and actual mutation counts;
+- exact uploaded candidate identity and exact observed candidate identity;
 - candidate verification and reconciliation result;
 - whether first mutation started / authorization was consumed;
 - whether production/runtime changed;

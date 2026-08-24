@@ -1,0 +1,151 @@
+name: FAST-LANE policy drift
+
+on:
+  workflow_call:
+    inputs:
+      canonical_policy_sha:
+        description: Exact immutable ops-workflows commit containing the canonical policy and this reusable workflow
+        required: true
+        type: string
+      snapshot_path:
+        description: Caller-repository JSON snapshot of inherited FAST-LANE invariants
+        required: false
+        type: string
+        default: .github/fast-lane-policy.json
+
+permissions:
+  contents: read
+
+jobs:
+  policy-drift:
+    name: FAST-LANE v2.2 policy drift
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out caller repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Check out exact canonical policy source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: rozkalnsandris/ops-workflows
+          ref: ${{ inputs.canonical_policy_sha }}
+          path: .ops-policy
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Compare inherited policy snapshot with canonical invariants
+        shell: bash
+        env:
+          CANONICAL_POLICY_SHA: ${{ inputs.canonical_policy_sha }}
+          SNAPSHOT_PATH: ${{ inputs.snapshot_path }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from __future__ import annotations
+
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+
+          canonical_sha = os.environ['CANONICAL_POLICY_SHA']
+          snapshot_raw = os.environ['SNAPSHOT_PATH']
+
+          if not re.fullmatch(r'[0-9a-f]{40}', canonical_sha):
+              raise SystemExit('policy drift: canonical_policy_sha must be an exact 40-character lowercase SHA')
+
+          snapshot_path = Path(snapshot_raw)
+          if snapshot_path.is_absolute() or '..' in snapshot_path.parts:
+              raise SystemExit('policy drift: snapshot_path must stay inside the caller repository')
+          if not snapshot_path.is_file():
+              raise SystemExit(f'policy drift: missing caller snapshot: {snapshot_path}')
+
+          observed_sha = subprocess.check_output(
+              ['git', '-C', '.ops-policy', 'rev-parse', 'HEAD'],
+              text=True,
+          ).strip()
+          if observed_sha != canonical_sha:
+              raise SystemExit('policy drift: canonical checkout SHA mismatch')
+
+          canonical_path = Path('.ops-policy/policy/fast-lane-v2.2.json')
+          if not canonical_path.is_file():
+              raise SystemExit('policy drift: canonical policy file missing at pinned SHA')
+
+          canonical = json.loads(canonical_path.read_text(encoding='utf-8'))
+          snapshot = json.loads(snapshot_path.read_text(encoding='utf-8'))
+
+          expected_top = {
+              'policy': 'FAST-LANE v2.2 Composite',
+              'canonical_repository': 'rozkalnsandris/ops-workflows',
+              'principle': 'HUMAN_APPROVES_RISK_OR_DECISION_AUTOMATION_EXECUTES_TECHNICAL_STEPS',
+          }
+          for key, expected in expected_top.items():
+              if canonical.get(key) != expected:
+                  raise SystemExit(f'policy drift: pinned canonical policy changed invariant: {key}')
+              if snapshot.get(key) != expected:
+                  raise SystemExit(f'policy drift: caller snapshot mismatch: {key}')
+
+          canonical_values = {
+              'normal_max_owner_gates': canonical.get('human_gate_budget', {}).get('normal_max_owner_gates'),
+              'read_only_checkpoint_creates_owner_gate': canonical.get('human_gate_budget', {}).get('read_only_checkpoint_creates_owner_gate'),
+              'max_scope_preserving_corrective_commits': canonical.get('fast', {}).get('max_scope_preserving_corrective_commits'),
+              'technical_attempts_max': canonical.get('technical_attempt_limit', {}).get('initial_attempt_plus_scope_preserving_corrections_max'),
+              'stop_before_fourth_attempt': canonical.get('technical_attempt_limit', {}).get('stop_before_fourth_attempt'),
+              'candidate_identity_must_match_exact_uploaded_artifact': canonical.get('composite_live', {}).get('candidate_identity_must_match_exact_uploaded_artifact'),
+              'zero_normal_traffic_candidate_attachment_allowed_when_platform_requires': canonical.get('composite_live', {}).get('zero_normal_traffic_candidate_attachment_allowed_when_platform_requires'),
+              'pre_enumerated_multi_step_live_sequence_may_share_one_composite_gate': canonical.get('composite_live', {}).get('pre_enumerated_multi_step_live_sequence_may_share_one_composite_gate'),
+              'authorization_consumed_at_first_mutation': canonical.get('mutation_failure', {}).get('authorization_consumed_at_first_mutation'),
+              'automatic_retry': canonical.get('mutation_failure', {}).get('automatic_retry'),
+              'automatic_rollback': canonical.get('mutation_failure', {}).get('automatic_rollback'),
+              'automatic_cleanup': canonical.get('mutation_failure', {}).get('automatic_cleanup'),
+              'alternate_mutation_path': canonical.get('mutation_failure', {}).get('alternate_mutation_path'),
+              'merge_explicit_owner_decision': canonical.get('merge', {}).get('explicit_owner_decision'),
+              'merge_authorizes_live_mutation': canonical.get('merge', {}).get('authorizes_live_mutation'),
+          }
+
+          expected_values = {
+              'normal_max_owner_gates': 2,
+              'read_only_checkpoint_creates_owner_gate': False,
+              'max_scope_preserving_corrective_commits': 2,
+              'technical_attempts_max': 3,
+              'stop_before_fourth_attempt': True,
+              'candidate_identity_must_match_exact_uploaded_artifact': True,
+              'zero_normal_traffic_candidate_attachment_allowed_when_platform_requires': True,
+              'pre_enumerated_multi_step_live_sequence_may_share_one_composite_gate': True,
+              'authorization_consumed_at_first_mutation': True,
+              'automatic_retry': False,
+              'automatic_rollback': False,
+              'automatic_cleanup': False,
+              'alternate_mutation_path': False,
+              'merge_explicit_owner_decision': True,
+              'merge_authorizes_live_mutation': False,
+          }
+
+          snapshot_values = snapshot.get('invariants')
+          if not isinstance(snapshot_values, dict):
+              raise SystemExit('policy drift: caller snapshot invariants must be an object')
+
+          errors = []
+          for key, expected in expected_values.items():
+              if canonical_values.get(key) != expected:
+                  errors.append(f'pinned canonical invariant changed: {key}')
+              if snapshot_values.get(key) != canonical_values.get(key):
+                  errors.append(f'caller snapshot drift: {key}')
+
+          if errors:
+              print('FAST_LANE_POLICY_DRIFT=FAIL')
+              for error in errors:
+                  print(f'- {error}')
+              raise SystemExit(1)
+
+          print('FAST_LANE_POLICY_DRIFT=PASS')
+          print(f'CANONICAL_POLICY_SHA={canonical_sha}')
+          print(f'SNAPSHOT_PATH={snapshot_path.as_posix()}')
+          print(f'INVARIANTS_CHECKED={len(expected_values)}')
+          print('MUTATION=NO')
+          PY

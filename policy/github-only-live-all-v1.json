@@ -1,10 +1,12 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "policy": "GITHUB-ONLY / LIVE-ALL v1",
   "canonical_repository": "rozkalnsandris/ops-workflows",
   "accepted_date": "2026-08-25",
+  "amended_date": "2026-08-25",
   "inherits": "FAST-LANE v2.2 Composite",
   "precedence": "repository_local_stricter_trust_boundary_rules_win",
+  "startup_contract": "docs/START_GITHUB_ONLY_V1.md",
   "commands": {
     "github_only": {
       "canonical": "GITHUB-ONLY",
@@ -28,11 +30,34 @@
         "SECRET_CREDENTIAL_PERMISSION_TRUST_BOUNDARY_CHANGE",
         "DESTRUCTIVE_CLEANUP",
         "GITHUB_WRITE_WITH_DETERMINISTIC_FORBIDDEN_LIVE_SIDE_EFFECT"
-      ]
+      ],
+      "start_bootstrap": {
+        "deterministic": true,
+        "read_repository_rules_first": true,
+        "read_shared_policy_and_start_contract": true,
+        "refresh_default_branch": true,
+        "inspect_active_prs": true,
+        "inspect_active_issues_master_handoff_and_dependencies": true,
+        "inspect_relevant_deploy_queue": true,
+        "continue_highest_priority_canonical_safe_lane": true,
+        "open_issue_required": false,
+        "invent_speculative_work_when_idle": false,
+        "stop_when_no_canonical_safe_continuation": "IDLE"
+      },
+      "parked_session": {
+        "is_queue_state": false,
+        "when_ready_live_work_is_deferred": "PARKED_NO_ACTION_REQUIRED_NOW",
+        "must_not_pressure_immediate_live_all": true
+      }
     },
     "live_all": {
       "canonical": "LIVE-ALL",
-      "authorization_type": "BATCH_COMPOSITE_LIVE_FOR_FROZEN_READY_QUEUE_SNAPSHOT",
+      "authorization_type": "BATCH_COMPOSITE_LIVE_FOR_FROZEN_EXECUTABLE_READY_QUEUE_SNAPSHOT",
+      "executor_capability_check_before_snapshot": true,
+      "executor_capability_check_is_read_only": true,
+      "freeze_only_ready_items_executable_in_current_session": true,
+      "ready_but_executor_unavailable_items_remain_ready": true,
+      "no_executable_ready_items_means_no_mutation_and_no_live_authorization_consumption": true,
       "does_not_authorize": [
         "MERGE",
         "PRODUCTION_DATABASE_WRITE_OR_MIGRATION",
@@ -50,7 +75,12 @@
     "visibility": "public",
     "title_prefix": "[DEPLOY-QUEUE]",
     "states": ["WAITING", "READY", "BLOCKED", "EXECUTING", "STOP_ERROR", "DONE"],
-    "snapshot_selects_only": "OPEN_READY_AT_LIVE_ALL_START",
+    "parked_is_session_state_not_queue_state": true,
+    "executor_availability_is_session_capability_not_queue_readiness": true,
+    "executor_unavailable_alone_must_not_change_ready_to_blocked": true,
+    "blocked_requires_rollout_eligibility_or_contract_failure": true,
+    "snapshot_selects_only": "OPEN_READY_AND_EXECUTABLE_IN_CURRENT_SESSION_AT_LIVE_ALL_START",
+    "ready_but_executor_unavailable_after_capability_check": "LEAVE_READY_AND_REPORT_PARKED_NOT_SELECTED",
     "new_ready_items_after_snapshot_are_excluded": true,
     "one_coherent_rollout_per_issue": true,
     "sequential_by_default": true,
@@ -87,9 +117,23 @@
     "no_outstanding_source_work": true,
     "no_outstanding_separate_prerequisite_owner_gate": true,
     "execution_entrypoint_prepared": true,
-    "preflight_and_verification_defined": true
+    "preflight_and_verification_defined": true,
+    "current_session_executor_availability_required_for_ready": false
+  },
+  "blocked_rule": {
+    "valid_causes": [
+      "APPROVED_SOURCE_SHA_NO_LONGER_INTENDED",
+      "TARGET_OR_REQUIRED_BASELINE_CONFLICT",
+      "DEPENDENCY_INCOMPLETE_OR_FAILED",
+      "REQUIRED_CI_REVIEW_OR_POST_MERGE_EVIDENCE_INVALID",
+      "REVIEWED_ENTRYPOINT_MISSING_OR_INCOMPATIBLY_CHANGED",
+      "NEW_SEPARATELY_GATED_OR_UNDECLARED_MUTATION_CATEGORY_REQUIRED",
+      "CANDIDATE_TARGET_OR_POLICY_DRIFT_MAKES_ROLLOUT_INELIGIBLE"
+    ],
+    "executor_unavailable_alone_is_blocked": false
   },
   "live_all_execution": {
+    "capability_check_before_freeze": true,
     "freeze_issue_numbers_and_declared_envelopes": true,
     "revalidate_before_each_first_live_mutation": true,
     "fail_closed_on_sha_target_or_baseline_drift": true,
@@ -117,7 +161,8 @@
   },
   "failure": {
     "batch_authorization_consumed_at_first_batch_mutation": true,
-    "pre_mutation_item_failure": "MARK_BLOCKED_AND_ONLY_CONTINUE_INDEPENDENT_NON_OVERLAPPING_ITEMS",
+    "pre_mutation_rollout_eligibility_failure": "MARK_BLOCKED_AND_ONLY_CONTINUE_INDEPENDENT_NON_OVERLAPPING_ITEMS",
+    "pre_snapshot_executor_unavailable": "LEAVE_READY_REPORT_PARKED_NOT_SELECTED",
     "post_mutation_error_or_ambiguity": "PRESERVE_EVIDENCE_MARK_STOP_ERROR_AND_STOP_REMAINING_BATCH",
     "automatic_retry": false,
     "automatic_rollback": false,
@@ -130,5 +175,10 @@
     "append_final_issue_receipt": true,
     "record_mutation_counts": true,
     "close_successful_issue": true
+  },
+  "operator_ux": {
+    "action_required_only_for_real_current_owner_decision": true,
+    "ready_deferred_live_work_default_message": "PARKED_NO_ACTION_REQUIRED_NOW",
+    "live_all_is_not_mandatory_immediate_next_action": true
   }
 }

@@ -1,0 +1,36 @@
+name: Policy Merge Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: policy-merge-gate-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  policy-merge-gate:
+    name: Policy Merge Gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate canonical GITHUB-ONLY policy
+        run: python3 scripts/validate_github_only_policy.py --root .
+
+      - name: Run START state-machine conformance
+        run: python3 -m unittest discover -s tests/start_bootstrap -p 'test_*.py' -v
+
+      - name: Compile policy tooling
+        run: python3 -m py_compile scripts/start_bootstrap_model.py scripts/validate_github_only_policy.py scripts/lint_deploy_queue.py

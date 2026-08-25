@@ -1,0 +1,63 @@
+name: GITHUB-ONLY policy drift
+
+on:
+  workflow_call:
+    inputs:
+      canonical_policy_sha:
+        description: Exact immutable ops-workflows commit containing the canonical GITHUB-ONLY policy and this reusable workflow
+        required: true
+        type: string
+      manifest_path:
+        description: Caller repository START manifest
+        required: false
+        type: string
+        default: .github/start-github-only.json
+      snapshot_path:
+        description: Caller repository inherited GITHUB-ONLY invariant snapshot
+        required: false
+        type: string
+        default: .github/github-only-policy.json
+
+permissions:
+  contents: read
+
+jobs:
+  policy-drift:
+    name: GITHUB-ONLY policy drift
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out caller repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Check out exact canonical policy source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: rozkalnsandris/ops-workflows
+          ref: ${{ inputs.canonical_policy_sha }}
+          path: .ops-policy
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate pinned adoption against canonical policy
+        env:
+          CANONICAL_POLICY_SHA: ${{ inputs.canonical_policy_sha }}
+          MANIFEST_PATH: ${{ inputs.manifest_path }}
+          SNAPSHOT_PATH: ${{ inputs.snapshot_path }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$CANONICAL_POLICY_SHA" in
+            (*[!0-9a-f]*|'') echo "canonical_policy_sha must be lowercase hex" >&2; exit 1 ;;
+          esac
+          test "${#CANONICAL_POLICY_SHA}" -eq 40
+          test "$(git -C .ops-policy rev-parse HEAD)" = "$CANONICAL_POLICY_SHA"
+
+          python3 .ops-policy/scripts/validate_github_only_policy.py \
+            --canonical-root .ops-policy \
+            --consumer-root . \
+            --manifest "$MANIFEST_PATH" \
+            --snapshot "$SNAPSHOT_PATH"

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rozkalnsandris/ops-workflows/policy/schemas/live-entrypoints-v1.schema.json",
+  "title": "Governed live entrypoint inventory v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "entries"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["repository", "id", "workflow", "trigger", "executor", "authorization_class", "operations", "github_only"],
+        "properties": {
+          "repository": {"type": "string", "minLength": 1},
+          "id": {"type": "string", "minLength": 1},
+          "workflow": {"type": "string", "minLength": 1},
+          "trigger": {"type": "string", "minLength": 1},
+          "executor": {"type": "string", "minLength": 1},
+          "authorization_class": {"type": "string", "minLength": 1},
+          "operations": {"type": "object", "minProperties": 1},
+          "github_only": {
+            "type": "object",
+            "required": ["allowed_operations", "forbidden_operations"],
+            "properties": {
+              "allowed_operations": {"type": "array", "items": {"type": "string"}},
+              "forbidden_operations": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        }
+      }
+    }
+  }
+}

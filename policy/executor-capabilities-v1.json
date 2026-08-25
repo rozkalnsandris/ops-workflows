@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "executors": [
+    {
+      "executor_class": "github-hosted",
+      "capability_probe": {
+        "mutation_allowed": false,
+        "required_capabilities": ["workflow_executor_available"],
+        "forbidden_during_probe": ["protected_runtime_data_read", "external_configuration_mutation"]
+      }
+    },
+    {
+      "executor_class": "trusted-home-host",
+      "capability_probe": {
+        "mutation_allowed": false,
+        "required_capabilities": ["connect", "exact_repo_checkout_access"],
+        "forbidden_during_probe": ["service_restart", "package_install", "protected_runtime_data_read", "filesystem_cleanup"]
+      }
+    },
+    {
+      "executor_class": "repository-defined-trusted-executor",
+      "capability_probe": {
+        "mutation_allowed": false,
+        "required_capabilities": ["repository_local_probe_contract"],
+        "forbidden_during_probe": ["undeclared_mutation", "protected_runtime_data_read"]
+      }
+    }
+  ]
+}

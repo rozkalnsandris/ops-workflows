@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rozkalnsandris/ops-workflows/policy/schemas/start-github-only-v1.schema.json",
+  "title": "START GITHUB-ONLY v1 repository manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "repository",
+    "default_branch",
+    "shared_policy",
+    "authority",
+    "continuation",
+    "source_work",
+    "merge",
+    "deploy",
+    "security"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "repository": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},
+    "default_branch": {"type": "string", "minLength": 1},
+    "shared_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "contract", "startup_contract", "minimum_machine_schema", "adoption_version"],
+      "properties": {
+        "repository": {"const": "rozkalnsandris/ops-workflows"},
+        "contract": {"const": "GITHUB-ONLY / LIVE-ALL v1"},
+        "startup_contract": {"const": "START GITHUB-ONLY v1"},
+        "minimum_machine_schema": {"type": "integer", "minimum": 2},
+        "adoption_version": {"type": "string", "minLength": 1}
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["repository_rules", "local_rules_override_when_stricter"],
+      "properties": {
+        "repository_rules": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "master_sources": {"type": "array", "items": {"type": "object"}},
+        "local_rules_override_when_stricter": {"const": true}
+      }
+    },
+    "continuation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["precedence", "tie_breakers", "unresolved_tie_result", "no_candidate_result", "excluded_labels"],
+      "properties": {
+        "precedence": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "tie_breakers": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "unresolved_tie_result": {"const": "AMBIGUOUS_CANONICAL_LANE"},
+        "no_candidate_result": {"const": "IDLE"},
+        "excluded_labels": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "source_work": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default_branch_direct_writes", "bounded_correction_limit", "jit_revalidation"],
+      "properties": {
+        "default_branch_direct_writes": {"const": false},
+        "bounded_correction_limit": {"type": "integer", "minimum": 0, "maximum": 2},
+        "jit_revalidation": {"const": true}
+      }
+    },
+    "merge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "explicit_owner_authorization", "bind_expected_head_sha", "require_current_head_revalidation", "require_exact_head_ci", "require_review_thread_resolution", "auto_merge"],
+      "properties": {
+        "method": {"const": "squash"},
+        "explicit_owner_authorization": {"const": true},
+        "bind_expected_head_sha": {"const": true},
+        "require_current_head_revalidation": {"const": true},
+        "require_exact_head_ci": {"const": true},
+        "require_review_thread_resolution": {"type": "boolean"},
+        "auto_merge": {"const": false}
+      }
+    },
+    "deploy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["queue_repository", "queue_prefix", "executor_classes", "executor_capability_affects_readiness"],
+      "properties": {
+        "queue_repository": {"const": "rozkalnsandris/ops-workflows"},
+        "queue_prefix": {"const": "[DEPLOY-QUEUE]"},
+        "executor_classes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "executor_capability_affects_readiness": {"const": false}
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository_is_public", "public_queue_forbidden_content"],
+      "properties": {
+        "repository_is_public": {"type": "boolean"},
+        "public_queue_forbidden_content": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+      }
+    }
+  }
+}

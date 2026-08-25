@@ -4,9 +4,14 @@
   "canonical_repository": "rozkalnsandris/ops-workflows",
   "accepted_date": "2026-08-25",
   "amended_date": "2026-08-25",
+  "adoption_version": "2026-08-25.2",
   "inherits": "FAST-LANE v2.2 Composite",
   "precedence": "repository_local_stricter_trust_boundary_rules_win",
   "startup_contract": "docs/START_GITHUB_ONLY_V1.md",
+  "startup_manifest_schema": "policy/schemas/start-github-only-v1.schema.json",
+  "consumer_baseline": "policy/github-only-consumer-baseline.json",
+  "live_entrypoint_inventory": "policy/live-entrypoints-v1.json",
+  "executor_capability_inventory": "policy/executor-capabilities-v1.json",
   "commands": {
     "github_only": {
       "canonical": "GITHUB-ONLY",
@@ -29,10 +34,24 @@
         "CLOUDFLARE_DNS_TUNNEL_ACCESS_MUTATION",
         "SECRET_CREDENTIAL_PERMISSION_TRUST_BOUNDARY_CHANGE",
         "DESTRUCTIVE_CLEANUP",
-        "GITHUB_WRITE_WITH_DETERMINISTIC_FORBIDDEN_LIVE_SIDE_EFFECT"
+        "GITHUB_WRITE_WITH_DETERMINISTIC_FORBIDDEN_LIVE_SIDE_EFFECT",
+        "DIRECT_DEFAULT_BRANCH_CONTENT_WRITE"
       ],
       "start_bootstrap": {
         "deterministic": true,
+        "step_count": 10,
+        "steps": [
+          "RESOLVE_CANONICAL_REPOSITORY_AND_MODE",
+          "LOAD_LOCAL_AUTHORITY",
+          "LOAD_SHARED_POLICY_AND_VALIDATE_ADOPTION",
+          "SNAPSHOT_DEFAULT_BRANCH_AND_GOVERNANCE",
+          "INSPECT_AND_NORMALIZE_ACTIVE_PRS",
+          "INSPECT_ISSUES_HANDOFF_ROADMAP_DEPENDENCIES",
+          "INSPECT_DEPLOY_QUEUE_INDEPENDENT_OF_EXECUTOR",
+          "SELECT_CANONICAL_LANE",
+          "EXECUTE_BOUNDED_SAFE_SOURCE_WORK_WITH_JIT_REVALIDATION",
+          "ROUTE_FINAL_STATE"
+        ],
         "read_repository_rules_first": true,
         "read_shared_policy_and_start_contract": true,
         "refresh_default_branch": true,
@@ -42,8 +61,31 @@
         "continue_highest_priority_canonical_safe_lane": true,
         "open_issue_required": false,
         "invent_speculative_work_when_idle": false,
-        "stop_when_no_canonical_safe_continuation": "IDLE"
+        "stop_when_no_canonical_safe_continuation": "IDLE",
+        "jit_revalidation_before_state_dependent_github_mutation": true
       },
+      "continuation": {
+        "default_precedence": [
+          "explicit_current_handoff",
+          "active_focused_pr_blocking_current_phase",
+          "active_issue_declared_as_current",
+          "deploy_queue_source_reconciliation",
+          "explicitly_ordered_next_roadmap_item"
+        ],
+        "default_tie_breakers": ["explicit_phase_priority", "explicit_dependency_order"],
+        "forbid_implicit_api_order_tie_break": true,
+        "forbid_implicit_issue_number_tie_break": true,
+        "unresolved_tie_result": "AMBIGUOUS_CANONICAL_LANE",
+        "excluded_candidate_labels": ["automation-fixture", "do-not-merge", "superseded", "parked-historical"]
+      },
+      "final_state_router": [
+        "READY_FOR_MERGE",
+        "PARKED",
+        "STOP_ERROR",
+        "NEW_SCOPE_OR_RISK",
+        "AMBIGUOUS_CANONICAL_LANE",
+        "IDLE"
+      ],
       "parked_session": {
         "is_queue_state": false,
         "when_ready_live_work_is_deferred": "PARKED_NO_ACTION_REQUIRED_NOW",
@@ -58,6 +100,7 @@
       "freeze_only_ready_items_executable_in_current_session": true,
       "ready_but_executor_unavailable_items_remain_ready": true,
       "no_executable_ready_items_means_no_mutation_and_no_live_authorization_consumption": true,
+      "validate_dependency_dag_and_target_conflicts_before_snapshot": true,
       "does_not_authorize": [
         "MERGE",
         "PRODUCTION_DATABASE_WRITE_OR_MIGRATION",
@@ -74,17 +117,34 @@
     "repository": "rozkalnsandris/ops-workflows",
     "visibility": "public",
     "title_prefix": "[DEPLOY-QUEUE]",
-    "states": ["WAITING", "READY", "BLOCKED", "EXECUTING", "STOP_ERROR", "DONE"],
+    "open_queue_states": ["WAITING", "READY", "BLOCKED", "EXECUTING", "STOP_ERROR"],
+    "terminal_outcomes": ["DONE", "CANCELLED"],
     "parked_is_session_state_not_queue_state": true,
     "executor_availability_is_session_capability_not_queue_readiness": true,
     "executor_unavailable_alone_must_not_change_ready_to_blocked": true,
     "blocked_requires_rollout_eligibility_or_contract_failure": true,
-    "snapshot_selects_only": "OPEN_READY_AND_EXECUTABLE_IN_CURRENT_SESSION_AT_LIVE_ALL_START",
+    "blocked_reason_required": true,
+    "blocked_reason_enum": [
+      "APPROVED_SOURCE_SHA_NO_LONGER_INTENDED",
+      "TARGET_OR_REQUIRED_BASELINE_CONFLICT",
+      "DEPENDENCY_INCOMPLETE_OR_FAILED",
+      "REQUIRED_CI_REVIEW_OR_POST_MERGE_EVIDENCE_INVALID",
+      "REVIEWED_ENTRYPOINT_MISSING_OR_INCOMPATIBLY_CHANGED",
+      "NEW_SEPARATELY_GATED_OR_UNDECLARED_MUTATION_CATEGORY_REQUIRED",
+      "CANDIDATE_TARGET_OR_POLICY_DRIFT_MAKES_ROLLOUT_INELIGIBLE"
+    ],
+    "snapshot_selects_only": "OPEN_READY_EXECUTABLE_DEPENDENCY_VALID_CONFLICT_FREE_AT_LIVE_ALL_START",
     "ready_but_executor_unavailable_after_capability_check": "LEAVE_READY_AND_REPORT_PARKED_NOT_SELECTED",
     "new_ready_items_after_snapshot_are_excluded": true,
     "one_coherent_rollout_per_issue": true,
     "sequential_by_default": true,
     "same_target_concurrency_allowed": false,
+    "same_target_requires_explicit_order": true,
+    "dependency_graph_must_be_acyclic": true,
+    "dependency_cycle_result": "STOP_NO_MUTATION",
+    "eligibility_checked_at_required_for_ready": true,
+    "evidence_references_required_for_ready": true,
+    "structured_dependency_ids_required": true,
     "required_fields": [
       "source_repository",
       "exact_git_sha_or_waiting_merge",
@@ -132,8 +192,30 @@
     ],
     "executor_unavailable_alone_is_blocked": false
   },
+  "authorization": {
+    "merge": {
+      "explicit_owner_decision": true,
+      "bind_latest_ready_receipt": true,
+      "bind_expected_head_sha": true,
+      "fresh_pre_mutation_revalidation": true,
+      "authorization_does_not_follow_changed_head": true,
+      "auto_merge": false
+    },
+    "cleanup": {
+      "explicit_owner_decision": true,
+      "strategy": "FORWARD_CORRECTIVE_COMMIT_ONLY",
+      "bind_accidental_commit_and_expected_current_main": true,
+      "allow_force": false,
+      "allow_reset": false,
+      "allow_rebase": false,
+      "consumed_at_first_cleanup_write": true
+    }
+  },
   "live_all_execution": {
     "capability_check_before_freeze": true,
+    "build_dependency_dag_before_freeze": true,
+    "reject_dependency_cycles_before_mutation": true,
+    "exclude_unordered_same_target_conflicts": true,
     "freeze_issue_numbers_and_declared_envelopes": true,
     "revalidate_before_each_first_live_mutation": true,
     "fail_closed_on_sha_target_or_baseline_drift": true,
@@ -174,7 +256,8 @@
     "require_exact_observed_identity_when_platform_exposes_it": true,
     "append_final_issue_receipt": true,
     "record_mutation_counts": true,
-    "close_successful_issue": true
+    "close_successful_issue": true,
+    "successful_issue_terminal_outcome": "DONE"
   },
   "operator_ux": {
     "action_required_only_for_real_current_owner_decision": true,

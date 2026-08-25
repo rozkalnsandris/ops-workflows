@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "repository": "rozkalnsandris/RPi5_main",
+      "id": "deals-9128-route-cutover",
+      "workflow": ".github/workflows/deals-9128-route-cutover.yml",
+      "trigger": "issue_comment",
+      "executor": "github-hosted",
+      "authorization_class": "SPECIAL_COMPOSITE_LIVE",
+      "operations": {
+        "check": {"mutation": false},
+        "verify-loopback": {"mutation": false},
+        "cutover": {"mutation": true}
+      },
+      "github_only": {
+        "allowed_operations": ["check", "verify-loopback"],
+        "forbidden_operations": ["cutover"]
+      }
+    }
+  ]
+}

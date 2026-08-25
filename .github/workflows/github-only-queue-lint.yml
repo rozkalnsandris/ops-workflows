@@ -1,0 +1,36 @@
+name: GITHUB-ONLY queue lint
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+      - reopened
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  queue-lint:
+    if: startsWith(github.event.issue.title, '[DEPLOY-QUEUE]')
+    name: Deploy queue contract lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact policy source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Lint public queue contract
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          body_file="$RUNNER_TEMP/queue-body.md"
+          printf '%s' "$ISSUE_BODY" > "$body_file"
+          python3 scripts/lint_deploy_queue.py --title "$ISSUE_TITLE" --body-file "$body_file"

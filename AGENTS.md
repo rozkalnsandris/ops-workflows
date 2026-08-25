@@ -31,6 +31,28 @@ The core operating rule is:
 
 Repository-local stricter rules in consuming projects override this shared baseline.
 
+## GITHUB-ONLY / LIVE-ALL v1
+
+The canonical deferred-deployment operator mode is defined by:
+
+1. `docs/GITHUB_ONLY_LIVE_ALL.md` — normative command, queue, snapshot, revalidation and failure semantics;
+2. `policy/github-only-live-all-v1.json` — machine-readable invariants;
+3. `.github/ISSUE_TEMPLATE/deploy-queue.yml` — canonical public-safe deferred deploy queue issue form.
+
+Operator rules:
+
+- `GITHUB-ONLY` means perform GitHub/source-level work and prepare required live/deploy work up to, but not including, the first live mutation.
+- Persist deferred deploy work as `[DEPLOY-QUEUE]` GitHub Issues in this repository; never rely on chat or memory as the queue.
+- Merge remains separately explicit. `GITHUB-ONLY` and `LIVE-ALL` never imply merge.
+- A GitHub action whose deterministic side effect is a forbidden live mutation counts as live work and must not run under `GITHUB-ONLY`.
+- Mark a queue item `READY` only after the final exact deployable SHA exists and no separate prerequisite owner gate remains.
+- `LIVE-ALL` snapshots only open `READY` queue issues that exist at command start, revalidates every exact SHA/target/baseline and executes only the predeclared ordinary deployment envelope.
+- `LIVE-ALL` does not authorize database writes/migrations, secrets/credentials, permission/trust-boundary expansion, destructive cleanup, DNS/Tunnel/Access mutation or undeclared extra-risk work.
+- After any live mutation starts, error or ambiguity requires public-safe evidence preservation and STOP of the remaining batch; no automatic retry/rollback/cleanup/alternate mutation path unless explicitly pre-authorized.
+- Because this repository is public, queue issues must contain only public-safe operational metadata. Never place secrets or protected/private runtime data in them.
+
+Repository-local stricter deployment and trust-boundary rules remain authoritative.
+
 ## Scope boundary
 
 Keep this repository GitHub-side and reusable. Do not place RPi5 credentials, root helpers, production deploy implementations, database apply logic, private keys, or arbitrary remote-execution bridges here.

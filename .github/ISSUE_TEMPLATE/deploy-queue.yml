@@ -1,0 +1,142 @@
+name: Deferred deploy queue
+
+description: Persist one prepared deployment for a future LIVE-ALL batch.
+
+title: "[DEPLOY-QUEUE][WAITING] "
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This repository is public. Do not include secrets, credentials, private keys, authenticated cookies/storage, protected configuration, or unredacted sensitive logs.
+        One issue must represent one coherent rollout to one exact target.
+
+  - type: input
+    id: source_repository
+    attributes:
+      label: Source repository
+      description: Exact owner/repository.
+      placeholder: rozkalnsandris/example
+    validations:
+      required: true
+
+  - type: input
+    id: exact_git_sha
+    attributes:
+      label: Exact Git SHA
+      description: Exact immutable 40-character deployable SHA, or WAITING_MERGE until the final merged SHA exists.
+      placeholder: WAITING_MERGE
+    validations:
+      required: true
+
+  - type: input
+    id: source_reference
+    attributes:
+      label: Source PR / issue
+      description: Source PR and/or issue reference when applicable.
+      placeholder: PR #123 / issue #122
+
+  - type: input
+    id: target_alias
+    attributes:
+      label: Target / environment alias
+      description: Stable public-safe target identifier.
+      placeholder: production-worker / rpi5-app-production
+    validations:
+      required: true
+
+  - type: dropdown
+    id: execution_location_class
+    attributes:
+      label: Execution location class
+      options:
+        - github-actions
+        - trusted-home-host
+        - repository-defined-trusted-executor
+    validations:
+      required: true
+
+  - type: input
+    id: repository_entrypoint
+    attributes:
+      label: Reviewed repository entrypoint
+      description: Exact workflow/script/controller path in the source repository. Do not add private credentials or private host configuration.
+      placeholder: .github/workflows/deploy.yml or scripts/deploy.sh
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_baseline
+    attributes:
+      label: Expected pre-mutation baseline
+      description: Public-safe expected production/runtime version, SHA, deployment identity, or the exact read-only procedure that will resolve it at LIVE-ALL time.
+    validations:
+      required: true
+
+  - type: textarea
+    id: preflight
+    attributes:
+      label: Read-only preflight
+      description: Exact checks/evidence required before the first live mutation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification / reconciliation
+      description: Exact post-deploy read-only checks and required observed identity.
+    validations:
+      required: true
+
+  - type: textarea
+    id: allowed_mutations
+    attributes:
+      label: Allowed mutations and limits
+      description: Enumerate only the tightly bounded ordinary deployment mutations and practical operation counts.
+    validations:
+      required: true
+
+  - type: textarea
+    id: exclusions
+    attributes:
+      label: Explicit exclusions
+      description: State forbidden/unapproved mutation categories for this rollout.
+    validations:
+      required: true
+
+  - type: input
+    id: dependencies
+    attributes:
+      label: Queue dependencies
+      description: Other deploy-queue issue numbers that must complete first, or NONE.
+      placeholder: NONE
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deploy_class
+    attributes:
+      label: Deploy class
+      options:
+        - ORDINARY_LIVE_ALL_ELIGIBLE
+        - EXTRA_OWNER_GATE_REQUIRED
+        - NO_DEPLOY_CANCEL
+    validations:
+      required: true
+
+  - type: textarea
+    id: public_notes
+    attributes:
+      label: Public-safe notes
+      description: Optional context only; never add sensitive runtime details.
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: I confirmed this issue contains no secrets or protected configuration.
+          required: true
+        - label: I understand READY requires the final exact deployable SHA and no outstanding separate prerequisite owner gate.
+          required: true

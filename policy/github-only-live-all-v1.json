@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "policy": "GITHUB-ONLY / LIVE-ALL v1",
+  "canonical_repository": "rozkalnsandris/ops-workflows",
+  "accepted_date": "2026-08-25",
+  "inherits": "FAST-LANE v2.2 Composite",
+  "precedence": "repository_local_stricter_trust_boundary_rules_win",
+  "commands": {
+    "github_only": {
+      "canonical": "GITHUB-ONLY",
+      "accepted_aliases": ["git hub only"],
+      "persists_until": ["LIVE-ALL_COMPLETES_OR_STOPS", "EXPLICIT_MODE_CANCEL"],
+      "allows": [
+        "FRESH_GITHUB_STATE_READ",
+        "SOURCE_LEVEL_IMPLEMENTATION",
+        "ISSUE_BRANCH_COMMIT_PUSH_PR",
+        "CI_REVIEW_AND_BOUNDED_CORRECTIONS",
+        "POST_MERGE_READ_ONLY_EVIDENCE_AFTER_SEPARATE_MERGE_AUTH",
+        "DEPLOY_PREPARATION_UP_TO_FIRST_LIVE_MUTATION",
+        "DEPLOY_QUEUE_CREATE_OR_UPDATE"
+      ],
+      "forbids": [
+        "MERGE_WITHOUT_SEPARATE_EXPLICIT_AUTHORIZATION",
+        "PRODUCTION_DEPLOY_OR_PUBLISH",
+        "PRODUCTION_HOST_CONTAINER_SERVICE_DEVICE_MUTATION",
+        "PRODUCTION_DATABASE_WRITE_OR_MIGRATION",
+        "CLOUDFLARE_DNS_TUNNEL_ACCESS_MUTATION",
+        "SECRET_CREDENTIAL_PERMISSION_TRUST_BOUNDARY_CHANGE",
+        "DESTRUCTIVE_CLEANUP",
+        "GITHUB_WRITE_WITH_DETERMINISTIC_FORBIDDEN_LIVE_SIDE_EFFECT"
+      ]
+    },
+    "live_all": {
+      "canonical": "LIVE-ALL",
+      "authorization_type": "BATCH_COMPOSITE_LIVE_FOR_FROZEN_READY_QUEUE_SNAPSHOT",
+      "does_not_authorize": [
+        "MERGE",
+        "PRODUCTION_DATABASE_WRITE_OR_MIGRATION",
+        "SECRETS_OR_CREDENTIALS",
+        "PERMISSION_OR_TRUST_BOUNDARY_EXPANSION",
+        "DESTRUCTIVE_CLEANUP",
+        "CLOUDFLARE_DNS_TUNNEL_ACCESS_MUTATION",
+        "UNDECLARED_OR_EXTRA_RISK_CLASS"
+      ]
+    }
+  },
+  "queue": {
+    "transport": "GITHUB_ISSUE",
+    "repository": "rozkalnsandris/ops-workflows",
+    "visibility": "public",
+    "title_prefix": "[DEPLOY-QUEUE]",
+    "states": ["WAITING", "READY", "BLOCKED", "EXECUTING", "STOP_ERROR", "DONE"],
+    "snapshot_selects_only": "OPEN_READY_AT_LIVE_ALL_START",
+    "new_ready_items_after_snapshot_are_excluded": true,
+    "one_coherent_rollout_per_issue": true,
+    "sequential_by_default": true,
+    "same_target_concurrency_allowed": false,
+    "required_fields": [
+      "source_repository",
+      "exact_git_sha_or_waiting_merge",
+      "source_pr_or_issue_if_applicable",
+      "target_alias",
+      "execution_location_class",
+      "repository_entrypoint",
+      "expected_baseline_when_observable",
+      "read_only_preflight",
+      "verification_and_reconciliation",
+      "allowed_mutation_categories_and_limits",
+      "explicit_exclusions",
+      "dependencies_if_any",
+      "deploy_class_and_extra_owner_gate_requirement"
+    ],
+    "forbidden_public_content": [
+      "SECRETS",
+      "TOKENS",
+      "PASSWORDS",
+      "PRIVATE_KEYS",
+      "AUTHENTICATED_COOKIES_OR_STORAGE",
+      "SERVICE_CREDENTIALS",
+      "PROTECTED_CONFIGURATION",
+      "UNREDACTED_SENSITIVE_LOGS"
+    ]
+  },
+  "ready_rule": {
+    "pr_ready_is_not_deploy_ready": true,
+    "exact_merged_deployable_sha_required": true,
+    "no_outstanding_source_work": true,
+    "no_outstanding_separate_prerequisite_owner_gate": true,
+    "execution_entrypoint_prepared": true,
+    "preflight_and_verification_defined": true
+  },
+  "live_all_execution": {
+    "freeze_issue_numbers_and_declared_envelopes": true,
+    "revalidate_before_each_first_live_mutation": true,
+    "fail_closed_on_sha_target_or_baseline_drift": true,
+    "ordinary_allowed_when_predeclared_and_project_allowed": [
+      "TRUSTED_CHECKOUT_GIT_FETCH",
+      "TRUSTED_CHECKOUT_GIT_MERGE_FF_ONLY",
+      "PINNED_DETERMINISTIC_BUILD",
+      "EXACT_APPLICATION_ARTIFACT_OR_VERSION_UPLOAD",
+      "EXACT_APPLICATION_OR_WORKER_DEPLOYMENT_OR_PROMOTION",
+      "MINIMUM_REVIEWED_SERVICE_OR_CONTAINER_RESTART_REQUIRED_BY_DEPLOYMENT",
+      "READ_ONLY_CANDIDATE_VERIFICATION",
+      "READ_ONLY_POST_DEPLOY_RECONCILIATION",
+      "GITHUB_QUEUE_STATUS_AND_EVIDENCE_UPDATE"
+    ],
+    "never_implied": [
+      "RESET",
+      "REBASE",
+      "CLEAN",
+      "FORCE_OR_HISTORY_REWRITE",
+      "AD_HOC_PACKAGE_REPAIR",
+      "UNLISTED_RESTART",
+      "UNLISTED_HOST_CHANGE",
+      "ALTERNATE_DEPLOY_PATH"
+    ]
+  },
+  "failure": {
+    "batch_authorization_consumed_at_first_batch_mutation": true,
+    "pre_mutation_item_failure": "MARK_BLOCKED_AND_ONLY_CONTINUE_INDEPENDENT_NON_OVERLAPPING_ITEMS",
+    "post_mutation_error_or_ambiguity": "PRESERVE_EVIDENCE_MARK_STOP_ERROR_AND_STOP_REMAINING_BATCH",
+    "automatic_retry": false,
+    "automatic_rollback": false,
+    "automatic_cleanup": false,
+    "alternate_mutation_path": false
+  },
+  "completion": {
+    "require_declared_reconciliation": true,
+    "require_exact_observed_identity_when_platform_exposes_it": true,
+    "append_final_issue_receipt": true,
+    "record_mutation_counts": true,
+    "close_successful_issue": true
+  }
+}

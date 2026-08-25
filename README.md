@@ -9,6 +9,7 @@ This repository contains shared GitHub-side automation and policy:
 - reusable `workflow_call` workflows;
 - FAST-LANE v2.2 Composite delivery policy;
 - the FAST-LANE v2.2 decision record and migration rationale;
+- `GITHUB-ONLY` / `LIVE-ALL` deferred deployment policy and queue;
 - public-repository CI/security policy;
 - action full-SHA pinning checks;
 - public-runner safety checks;
@@ -46,6 +47,28 @@ Machine-readable invariants:
 `policy/fast-lane-v2.2.json`
 
 All owner repositories may adopt the same external vocabulary (`FAST`, `STRICT`, Ready receipt, exact merge gate, Composite Live envelope, bounded corrections) while keeping project-specific stricter safety rules and CI classification locally.
+
+## GITHUB-ONLY / LIVE-ALL
+
+Canonical deferred-deployment operator policy:
+
+`docs/GITHUB_ONLY_LIVE_ALL.md`
+
+Machine-readable contract:
+
+`policy/github-only-live-all-v1.json`
+
+Canonical queue transport:
+
+GitHub Issues in this repository using `.github/ISSUE_TEMPLATE/deploy-queue.yml` and the title prefix `[DEPLOY-QUEUE]`.
+
+- `GITHUB-ONLY` performs GitHub/source-level work and prepares every required ordinary deploy up to the first live mutation.
+- Deferred rollout state is persisted in GitHub, never only in chat/memory.
+- `LIVE-ALL` snapshots the currently open `READY` queue issues, freshly revalidates each exact SHA/target/baseline, and executes only the predeclared ordinary rollout envelopes sequentially by default.
+- Merge, DB writes/migrations, secrets/credentials, permission/trust-boundary expansion, destructive cleanup, DNS/Tunnel/Access changes and undeclared high-risk work remain separately gated.
+- After a live mutation starts, an error or ambiguous result stops the remaining batch without automatic retry/rollback/cleanup unless explicitly pre-authorized.
+
+Because this repository is public, queue issues must contain only public-safe operational metadata. Private credentials or protected runtime configuration never belong here.
 
 ## Public repository baseline
 

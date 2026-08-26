@@ -8,12 +8,41 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from start_bootstrap_model import Candidate, route_final_state, select_canonical_lane, validate_ready_dependency_graph
+from start_bootstrap_model import (
+    Candidate,
+    github_only_active_for_command,
+    route_final_state,
+    select_canonical_lane,
+    validate_ready_dependency_graph,
+)
 
 EXCLUDED = ("automation-fixture", "do-not-merge", "superseded", "parked-historical")
 
 
 class StartBootstrapConformance(unittest.TestCase):
+    def test_plain_start_does_not_activate_github_only(self):
+        self.assertFalse(github_only_active_for_command("START dashboard_RPi5"))
+
+    def test_explicit_start_activates_github_only(self):
+        self.assertTrue(github_only_active_for_command("START dashboard_RPi5 GITHUB-ONLY"))
+
+    def test_human_alias_start_activates_github_only(self):
+        self.assertTrue(github_only_active_for_command("START dashboard_RPi5 git hub only"))
+
+    def test_direct_commands_activate_github_only(self):
+        self.assertTrue(github_only_active_for_command("GITHUB-ONLY"))
+        self.assertTrue(github_only_active_for_command("git hub only"))
+
+    def test_plain_start_preserves_already_active_mode(self):
+        self.assertTrue(
+            github_only_active_for_command("START dashboard_RPi5", already_active=True)
+        )
+
+    def test_unrelated_github_only_text_does_not_activate(self):
+        self.assertFalse(
+            github_only_active_for_command("START dashboard_RPi5 please use GITHUB-ONLY")
+        )
+
     def test_no_issue_but_focused_pr_continues(self):
         selected, state = select_canonical_lane([
             Candidate("active_focused_pr_blocking_current_phase", "pr:42")

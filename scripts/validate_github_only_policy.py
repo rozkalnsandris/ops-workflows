@@ -4,7 +4,7 @@ from pathlib import Path
 
 POLICY = "GITHUB-ONLY / LIVE-ALL v1"
 START = "START GITHUB-ONLY v1"
-ADOPTION = "2026-08-25.2"
+ADOPTION = "2026-08-26.1"
 INVARIANTS = {
     "start_step_count": 10,
     "open_issue_required": False,
@@ -18,6 +18,9 @@ INVARIANTS = {
     "direct_default_branch_content_writes": False,
     "live_mutation_allowed_under_github_only": False,
     "no_executable_live_all_consumes_authorization": False,
+    "explicit_mode_token_required_when_inactive": True,
+    "plain_start_activates_github_only": False,
+    "already_active_plain_start_preserves_mode": True,
 }
 AGENT_MARKERS = ("START_GITHUB_ONLY_V1", "PARKED", "EXECUTOR", "READY", "BLOCKED")
 
@@ -86,6 +89,25 @@ def canonical(root: Path) -> list[str]:
     check(p.get("schema_version") == 2 and p.get("policy") == POLICY, "canonical policy identity mismatch", errors)
     check(p.get("adoption_version") == ADOPTION, "canonical adoption version mismatch", errors)
     gh = p.get("commands", {}).get("github_only", {})
+    activation = gh.get("activation", {})
+    for key, expected in {
+        "requires_explicit_mode_token_when_inactive": True,
+        "plain_start_activates_github_only": False,
+        "infer_from_policy_presence": False,
+        "infer_from_manifest_presence": False,
+        "infer_from_repository_adoption": False,
+        "infer_from_prior_conversation": False,
+        "already_active_plain_start_preserves_mode": True,
+    }.items():
+        check(activation.get(key) == expected, f"activation invariant mismatch: {key}", errors)
+    check(
+        activation.get("start_forms") == [
+            "START <repository> GITHUB-ONLY",
+            "START <repository> git hub only",
+        ],
+        "explicit START activation forms mismatch",
+        errors,
+    )
     boot = gh.get("start_bootstrap", {})
     for key, expected in {
         "deterministic": True, "step_count": 10, "open_issue_required": False,
@@ -104,7 +126,11 @@ def canonical(root: Path) -> list[str]:
     check(q.get("dependency_graph_must_be_acyclic") is True and q.get("same_target_requires_explicit_order") is True,
           "queue DAG/conflict invariants missing", errors)
     text = (root / "docs/START_GITHUB_ONLY_V1.md").read_text(encoding="utf-8")
-    check("**Status:** Accepted" in text and "## 5. Final-state router" in text, "START document authority/router mismatch", errors)
+    check("**Status:** Accepted" in text and "## 6. Final-state router" in text, "START document authority/router mismatch", errors)
+    check("plain command" in text.lower() and "does **not** activate github-only" in text.lower(),
+          "START document must explicitly reject plain-START activation", errors)
+    check("previous unrelated conversation" in text.lower(),
+          "START document must forbid prior-conversation activation inference", errors)
     manifest_checks(m, p, errors)
     snapshot_checks(snapshot, p, errors)
     entry = [e for e in live.get("entries", []) if e.get("repository") == "rozkalnsandris/RPi5_main" and e.get("id") == "deals-9128-route-cutover"]
@@ -120,7 +146,12 @@ def canonical(root: Path) -> list[str]:
         if cls in emap:
             check(emap[cls].get("capability_probe", {}).get("mutation_allowed") is False, f"executor probe mutating: {cls}", errors)
     managed = (root / "policy/managed/GITHUB_ONLY_START_V1.md").read_text(encoding="utf-8").upper()
-    for marker in AGENT_MARKERS + ("AMBIGUOUS_CANONICAL_LANE", "NO ACTION REQUIRED NOW"):
+    for marker in AGENT_MARKERS + (
+        "AMBIGUOUS_CANONICAL_LANE",
+        "NO ACTION REQUIRED NOW",
+        "PLAIN `START <REPOSITORY>` MUST NOT ACTIVATE",
+        "EXPLICIT CURRENT COMMAND",
+    ):
         check(marker in managed, f"managed block marker missing: {marker}", errors)
     for path in (
         "policy/schemas/start-github-only-v1.schema.json", "policy/schemas/live-entrypoints-v1.schema.json",

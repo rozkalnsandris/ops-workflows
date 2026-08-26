@@ -2,7 +2,8 @@
 
 **Status:** Accepted — canonical startup contract for `GITHUB-ONLY / LIVE-ALL v1`  
 **Effective:** 2026-08-25  
-**Issue:** #16  
+**Amended:** 2026-08-26  
+**Issues:** #16, #21  
 **Canonical policy:** `docs/GITHUB_ONLY_LIVE_ALL.md`  
 **Machine contract:** `policy/github-only-live-all-v1.json` (`schema_version: 2`)  
 **Per-repository manifest:** `.github/start-github-only.json` validated by `policy/schemas/start-github-only-v1.schema.json`
@@ -13,19 +14,53 @@ This document standardizes the operator UX for commands shaped like:
 START <repository> GITHUB-ONLY
 ```
 
+and the accepted human alias:
+
+```text
+START <repository> git hub only
+```
+
 It does not weaken repository-local rules, merge gates, live-mutation gates, or `LIVE-ALL` revalidation requirements.
 
-## 1. Core rule
+## 1. Activation boundary
+
+When GITHUB-ONLY is inactive, it MUST be activated only by an explicit current operator command:
+
+```text
+GITHUB-ONLY
+git hub only
+START <repository> GITHUB-ONLY
+START <repository> git hub only
+```
+
+A plain command such as:
+
+```text
+START <repository>
+```
+
+does **not** activate GITHUB-ONLY. It follows the repository's normal/FAST START semantics.
+
+Do not infer GITHUB-ONLY activation from:
+
+- the presence of this document;
+- the presence of `.github/start-github-only.json`;
+- repository adoption of the shared policy or managed block;
+- a previous unrelated conversation or stale chat state.
+
+If GITHUB-ONLY is already active in the same session, the existing persistence rule remains unchanged: the mode stays active until `LIVE-ALL` completes/stops or the owner explicitly cancels the mode. Therefore a later plain START does not silently cancel an already-active mode; it simply must not be the event that activates an inactive mode.
+
+## 2. Core rule
 
 `START <repository> GITHUB-ONLY` means:
 
 > Refresh canonical GitHub state, deterministically find the next safe canonical work lane, and continue GitHub/source work through the normal Ready/STOP boundary without asking the owner to infer routine technical next steps.
 
-A START session is not merely a status report and must not mechanically require an open issue when another canonical continuation source exists.
+A GITHUB-ONLY START session is not merely a status report and must not mechanically require an open issue when another canonical continuation source exists.
 
-## 2. Deterministic bootstrap order
+## 3. Deterministic bootstrap order
 
-On START, automation MUST perform these ten stages using fresh GitHub state:
+On a `START <repository> GITHUB-ONLY` command, automation MUST perform these ten stages using fresh GitHub state:
 
 1. resolve the canonical `owner/repository`, reject ambiguous aliases, record repository ID/default branch, and activate `GITHUB-ONLY`;
 2. read repository-local `AGENTS.md`, path-scoped governing rules, and canonical master/handoff material, then declare the authority chain used;
@@ -64,7 +99,7 @@ Candidates marked by machine-recognizable exclusion evidence such as `automation
 
 Do not invent speculative work merely to avoid an idle state. If no canonical safe continuation exists after the full bootstrap, report `IDLE`.
 
-## 3. Snapshot versus just-in-time revalidation
+## 4. Snapshot versus just-in-time revalidation
 
 The bootstrap snapshot selects the work lane; it does not freeze GitHub.
 
@@ -72,9 +107,9 @@ Before a GitHub mutation that depends on mutable state, automation MUST re-read 
 
 A Ready receipt is invalidated by a changed candidate head until the new head is freshly validated. A merge authorization binds only the candidate described by the latest Ready receipt and remains subject to fresh pre-mutation validation.
 
-## 4. START output UX
+## 5. GITHUB-ONLY START output UX
 
-Avoid making the owner decode internal bootstrap mechanics. A normal START should briefly report the resolved mode and lane, then do the work.
+Avoid making the owner decode internal bootstrap mechanics. A GITHUB-ONLY START should briefly report the resolved mode and lane, then do the work.
 
 Preferred compact form:
 
@@ -82,9 +117,11 @@ Preferred compact form:
 <repo> | GITHUB-ONLY active | canonical state refreshed | continuing <lane>
 ```
 
+This form MUST NOT be emitted merely because the user sent plain `START <repository>` while GITHUB-ONLY was inactive.
+
 Do not create owner actions for ordinary reads, CI polling, diff inspection, evidence refresh, queue inspection, capability probes, or other technical checkpoints.
 
-## 5. Final-state router
+## 6. Final-state router
 
 The tenth bootstrap stage produces one of these states:
 
@@ -97,7 +134,7 @@ The tenth bootstrap stage produces one of these states:
 
 `ACTION REQUIRED` is shown only for a real current owner decision.
 
-## 6. PARKED session semantics
+## 7. PARKED session semantics
 
 When all possible GitHub/source work is complete and a future live rollout is represented by a valid `[DEPLOY-QUEUE][READY]` issue, the GITHUB-ONLY session ends conceptually as:
 
@@ -110,7 +147,7 @@ NO ACTION REQUIRED NOW.
 
 Do not pressure the owner to run `LIVE-ALL` immediately. `LIVE-ALL` is used later, from a session/environment that can satisfy the selected queue items' declared executor requirements.
 
-## 7. Executor availability is not queue readiness
+## 8. Executor availability is not queue readiness
 
 Queue readiness describes the rollout candidate and its declared contract. Session executor availability describes the current operator session's capabilities. They are different dimensions.
 
@@ -129,7 +166,7 @@ Before starting a `LIVE-ALL` batch, automation MUST run only the declared non-mu
 
 If no READY item is executable, no live batch starts, no authorization is consumed, and the session remains `GITHUB-ONLY / PARKED`.
 
-## 8. When BLOCKED is correct
+## 9. When BLOCKED is correct
 
 `[BLOCKED]` is reserved for a problem with rollout eligibility or contract validity, such as:
 
@@ -143,7 +180,7 @@ If no READY item is executable, no live batch starts, no authorization is consum
 
 Executor unavailability alone is not candidate, target, baseline, dependency, or policy drift. A BLOCKED transition must record a structured blocked reason plus public-safe evidence.
 
-## 9. LIVE-ALL interaction
+## 10. LIVE-ALL interaction
 
 `LIVE-ALL` remains an explicit owner authorization for an executable frozen snapshot of ordinary READY items.
 
@@ -161,7 +198,7 @@ A dependency cycle causes a no-mutation stop. Two READY items targeting the same
 
 If no READY item is executable in the current session, perform no mutation, consume no live authorization, and report that the queue remains parked for a compatible executor session.
 
-## 10. Owner-facing action rule
+## 11. Owner-facing action rule
 
 Show an `ACTION REQUIRED` section only when a genuine current owner decision remains.
 

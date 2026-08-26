@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Iterable, Mapping, Sequence
 
@@ -20,6 +21,12 @@ FINAL_STATES = {
     "IDLE",
 }
 
+_GITHUB_ONLY_DIRECT = {"github-only", "git hub only"}
+_GITHUB_ONLY_START_RE = re.compile(
+    r"^start\s+\S+\s+(?:github-only|git\s+hub\s+only)$",
+    re.IGNORECASE,
+)
+
 
 @dataclass(frozen=True)
 class Candidate:
@@ -29,6 +36,22 @@ class Candidate:
     dependency_order: int | None = None
     labels: tuple[str, ...] = ()
     eligible: bool = True
+
+
+def github_only_active_for_command(command: str, *, already_active: bool = False) -> bool:
+    """Resolve GITHUB-ONLY activation from the current operator command.
+
+    When the mode is inactive, only an explicit GITHUB-ONLY command/token may
+    activate it. A plain START command never activates the mode. Once active,
+    the existing persistence contract keeps it active until separately ended.
+    """
+    if already_active:
+        return True
+
+    normalized = " ".join(command.strip().split()).casefold()
+    if normalized in _GITHUB_ONLY_DIRECT:
+        return True
+    return _GITHUB_ONLY_START_RE.fullmatch(normalized) is not None
 
 
 def _tie_key(candidate: Candidate) -> tuple[int, int]:

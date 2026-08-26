@@ -12,6 +12,23 @@ Machine policy:
 Repository manifest:
 `.github/start-github-only.json`
 
+### Activation boundary
+
+When GITHUB-ONLY is inactive, plain `START <repository>` MUST NOT activate it.
+
+Activation requires an explicit current command:
+
+```text
+GITHUB-ONLY
+git hub only
+START <repository> GITHUB-ONLY
+START <repository> git hub only
+```
+
+Do not infer activation from the presence of this managed block, the repository manifest, policy adoption, or prior unrelated chat state.
+
+If GITHUB-ONLY is already active in the same session, its existing persistence rule remains unchanged until `LIVE-ALL` completes/stops or the owner explicitly cancels the mode.
+
 ### Deterministic START bootstrap
 
 `START <repository> GITHUB-ONLY` MUST refresh canonical GitHub state in this order:

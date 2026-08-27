@@ -230,7 +230,9 @@
     "merge_may_create_live_auth": false,
     "executor_authorization_surface_write_allowed": false,
     "receipt_is_authority": false,
-    "receipt_failure_retries_execution": false
+    "receipt_failure_retries_execution": false,
+    "normalized_queue_contract_required": true,
+    "missing_or_ambiguous_queue_normalization": "LEAVE_READY_NOT_SELECTED"
   },
   "live_all_execution": {
     "capability_check_before_freeze": true,

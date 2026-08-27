@@ -166,6 +166,25 @@ class LiveAuthContractTests(unittest.TestCase):
         self.assertIn("read-only", text)
         self.assertIn("receipts are not authority", text)
 
+    def test_shared_policy_keeps_ready_as_eligibility_only(self):
+        policy = json.loads((ROOT / "policy" / "github-only-live-all-v1.json").read_text())
+        self.assertFalse(policy["ready_rule"]["ready_is_execution_authorization"])
+        deferred = policy["deferred_pull_authorization"]
+        self.assertTrue(deferred["owner_decision_must_be_materialized_for_deferred_pull_executor"])
+        self.assertFalse(deferred["github_only_may_create_live_auth"])
+        self.assertFalse(deferred["bare_continuation_may_create_live_auth"])
+        self.assertFalse(deferred["merge_may_create_live_auth"])
+        self.assertFalse(deferred["executor_authorization_surface_write_allowed"])
+        self.assertFalse(deferred["receipt_is_authority"])
+
+    def test_shared_doc_distinguishes_direct_and_deferred_execution(self):
+        text = (ROOT / "docs" / "GITHUB_ONLY_LIVE_ALL.md").read_text().lower()
+        self.assertIn("ready is eligibility only", text)
+        self.assertIn("direct same-session executor", text)
+        self.assertIn("deferred rpi5 pull executor", text)
+        self.assertIn("600-second ttl", text)
+        self.assertIn("receipt is evidence only", text)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

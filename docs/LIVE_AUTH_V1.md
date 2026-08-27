@@ -134,6 +134,8 @@ The queue may describe eligibility. The LIVE-AUTH object records the separate cu
 
 A `304 Not Modified` response is acceptable only for non-authoritative polling optimization. It is never sufficient for final authorization revalidation.
 
+P3 does not invent a second raw queue parser. The P1 RPi5 validator consumes a strict normalized queue object containing repository/issue/state plus the exact fields above. P4 must define the source-controlled deterministic queue-normalization/operation adapter that derives that object from the reviewed queue contract and static registry. Until that adapter exists and P5 proves the cross-repository interface, a READY item is **not executable via the deferred pull executor** and no LIVE-AUTH should be created for it. Missing or ambiguous normalization leaves the queue item READY/not-selected; it is not permission to guess an `operation_id` or mutation envelope.
+
 ## 7. Replay and expiry
 
 The local trusted state store owns replay prevention.

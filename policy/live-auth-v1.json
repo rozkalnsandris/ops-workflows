@@ -58,7 +58,10 @@
     "canonical_payload_hash_required": true,
     "fresh_predispatch_refetch_required": true,
     "conditional_304_sufficient_for_authority_revalidation": false,
-    "unknown_or_drifted_state": "REJECT"
+    "unknown_or_drifted_state": "REJECT",
+    "normalized_queue_contract_required_before_deferred_execution": true,
+    "normalized_queue_contract_owner": "RPi5_main_P4_STATIC_OPERATION_ADAPTER",
+    "missing_or_ambiguous_queue_normalization": "NOT_EXECUTABLE_VIA_DEFERRED_PULL"
   },
   "executor_credential": {
     "authorization_surface_issues_permission": "read",

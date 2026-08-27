@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rozkalnsandris/ops-workflows/blob/main/policy/schemas/deploy-receipt-v1.schema.json",
+  "title": "Rozkalns deploy receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "request_id", "live_auth_issue", "queue_issue", "source_repository", "source_sha",
+    "target_alias", "operation_id", "result", "mutation_started", "authorization_consumed",
+    "mutation_counts", "postconditions", "evidence_refs", "created_at"
+  ],
+  "properties": {
+    "schema": {"const": "rozkalns.deploy-receipt.v1"},
+    "request_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "live_auth_issue": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+    "queue_issue": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+    "source_repository": {
+      "type": "string", "minLength": 3, "maxLength": 201,
+      "pattern": "^[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}$"
+    },
+    "source_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "target_alias": {
+      "type": "string", "minLength": 1, "maxLength": 64,
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "operation_id": {
+      "type": "string", "minLength": 1, "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+    },
+    "result": {
+      "enum": ["DRY_RUN_READY", "SUCCEEDED", "REJECTED", "EXPIRED", "BLOCKED", "STOP_ERROR"]
+    },
+    "mutation_started": {"type": "boolean"},
+    "authorization_consumed": {"type": "boolean"},
+    "mutation_counts": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["category", "count"],
+        "properties": {
+          "category": {
+            "type": "string", "minLength": 1, "maxLength": 128,
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+          },
+          "count": {"type": "integer", "minimum": 0, "maximum": 100}
+        }
+      }
+    },
+    "postconditions": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "status"],
+        "properties": {
+          "name": {
+            "type": "string", "minLength": 1, "maxLength": 128,
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+          },
+          "status": {"enum": ["PASS", "FAIL", "UNKNOWN"]}
+        }
+      }
+    },
+    "evidence_refs": {
+      "type": "array", "maxItems": 32,
+      "items": {"type": "string", "minLength": 1, "maxLength": 512}
+    },
+    "created_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"mutation_started": {"const": true}}, "required": ["mutation_started"]},
+      "then": {"properties": {"authorization_consumed": {"const": true}}}
+    },
+    {
+      "if": {"properties": {"result": {"const": "DRY_RUN_READY"}}, "required": ["result"]},
+      "then": {
+        "properties": {
+          "mutation_started": {"const": false},
+          "authorization_consumed": {"const": false}
+        }
+      }
+    }
+  ]
+}

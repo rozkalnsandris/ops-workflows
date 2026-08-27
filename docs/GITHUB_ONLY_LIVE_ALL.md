@@ -139,7 +139,8 @@ For an ordinary READY item selected for the deferred RPi5 pull executor:
 4. bind exact source repository/SHA, target, `operation_id`, expected baseline, mutation budget, rollback policy, exclusions and dependencies;
 5. use the fixed 600-second TTL defined by `policy/live-auth-v1.json`; comments, labels, edits, reactions or locks never extend it;
 6. do not create LIVE-AUTH if the executor is unavailable or is unlikely to discover and revalidate the request inside the TTL; leave the queue item READY instead;
-7. the pull executor must independently re-fetch and validate the GitHub Issue, owner numeric identity, authorization-surface governance, queue state, source/CI/baseline, body hashes and local replay state immediately before its mutation-capable boundary.
+7. the pull executor must independently re-fetch and validate the GitHub Issue, owner numeric identity, authorization-surface governance, queue state, source/CI/baseline, body hashes and local replay state immediately before its mutation-capable boundary;
+8. require the reviewed deterministic queue-normalization/operation adapter defined by the RPi5 source contract; if the queue cannot be normalized unambiguously into the exact P1 binding fields, leave it READY/not-selected and do not create LIVE-AUTH.
 
 `START`, `turpini`, PR Ready, merge, `GITHUB-ONLY`, queue READY, a previous `LIVE-ALL`, a historical authorization, a receipt, or executor availability never imply a new LIVE-AUTH.
 

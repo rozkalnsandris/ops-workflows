@@ -3,7 +3,7 @@
   "policy": "GITHUB-ONLY / LIVE-ALL v1",
   "canonical_repository": "rozkalnsandris/ops-workflows",
   "accepted_date": "2026-08-25",
-  "amended_date": "2026-08-26",
+  "amended_date": "2026-08-28",
   "adoption_version": "2026-08-26.1",
   "inherits": "FAST-LANE v2.2 Composite",
   "precedence": "repository_local_stricter_trust_boundary_rules_win",
@@ -12,6 +12,9 @@
   "consumer_baseline": "policy/github-only-consumer-baseline.json",
   "live_entrypoint_inventory": "policy/live-entrypoints-v1.json",
   "executor_capability_inventory": "policy/executor-capabilities-v1.json",
+  "live_auth_contract": "policy/live-auth-v1.json",
+  "live_auth_payload_schema": "policy/schemas/live-auth-v1.schema.json",
+  "deploy_receipt_schema": "policy/schemas/deploy-receipt-v1.schema.json",
   "commands": {
     "github_only": {
       "canonical": "GITHUB-ONLY",
@@ -21,10 +24,7 @@
         "requires_explicit_mode_token_when_inactive": true,
         "plain_start_activates_github_only": false,
         "direct_commands": ["GITHUB-ONLY", "git hub only"],
-        "start_forms": [
-          "START <repository> GITHUB-ONLY",
-          "START <repository> git hub only"
-        ],
+        "start_forms": ["START <repository> GITHUB-ONLY", "START <repository> git hub only"],
         "infer_from_policy_presence": false,
         "infer_from_manifest_presence": false,
         "infer_from_repository_adoption": false,
@@ -49,7 +49,8 @@
         "SECRET_CREDENTIAL_PERMISSION_TRUST_BOUNDARY_CHANGE",
         "DESTRUCTIVE_CLEANUP",
         "GITHUB_WRITE_WITH_DETERMINISTIC_FORBIDDEN_LIVE_SIDE_EFFECT",
-        "DIRECT_DEFAULT_BRANCH_CONTENT_WRITE"
+        "DIRECT_DEFAULT_BRANCH_CONTENT_WRITE",
+        "LIVE_AUTH_CREATE_FOR_ACTIVE_DEFERRED_EXECUTOR"
       ],
       "start_bootstrap": {
         "deterministic": true,
@@ -93,12 +94,8 @@
         "excluded_candidate_labels": ["automation-fixture", "do-not-merge", "superseded", "parked-historical"]
       },
       "final_state_router": [
-        "READY_FOR_MERGE",
-        "PARKED",
-        "STOP_ERROR",
-        "NEW_SCOPE_OR_RISK",
-        "AMBIGUOUS_CANONICAL_LANE",
-        "IDLE"
+        "READY_FOR_MERGE", "PARKED", "STOP_ERROR", "NEW_SCOPE_OR_RISK",
+        "AMBIGUOUS_CANONICAL_LANE", "IDLE"
       ],
       "parked_session": {
         "is_queue_state": false,
@@ -175,14 +172,8 @@
       "deploy_class_and_extra_owner_gate_requirement"
     ],
     "forbidden_public_content": [
-      "SECRETS",
-      "TOKENS",
-      "PASSWORDS",
-      "PRIVATE_KEYS",
-      "AUTHENTICATED_COOKIES_OR_STORAGE",
-      "SERVICE_CREDENTIALS",
-      "PROTECTED_CONFIGURATION",
-      "UNREDACTED_SENSITIVE_LOGS"
+      "SECRETS", "TOKENS", "PASSWORDS", "PRIVATE_KEYS", "AUTHENTICATED_COOKIES_OR_STORAGE",
+      "SERVICE_CREDENTIALS", "PROTECTED_CONFIGURATION", "UNREDACTED_SENSITIVE_LOGS"
     ]
   },
   "ready_rule": {
@@ -192,7 +183,8 @@
     "no_outstanding_separate_prerequisite_owner_gate": true,
     "execution_entrypoint_prepared": true,
     "preflight_and_verification_defined": true,
-    "current_session_executor_availability_required_for_ready": false
+    "current_session_executor_availability_required_for_ready": false,
+    "ready_is_execution_authorization": false
   },
   "blocked_rule": {
     "valid_causes": [
@@ -225,6 +217,23 @@
       "consumed_at_first_cleanup_write": true
     }
   },
+  "deferred_pull_authorization": {
+    "ready_is_execution_authority": false,
+    "owner_decision_must_be_materialized_for_deferred_pull_executor": true,
+    "one_live_auth_per_selected_queue_item": true,
+    "authorization_transport": "OWNER_AUTHORED_GITHUB_ISSUE",
+    "fixed_ttl_seconds": 600,
+    "create_only_after_fresh_revalidation_and_capability_check": true,
+    "do_not_create_when_executor_unavailable_or_ttl_cannot_be_met": true,
+    "github_only_may_create_live_auth": false,
+    "bare_continuation_may_create_live_auth": false,
+    "merge_may_create_live_auth": false,
+    "executor_authorization_surface_write_allowed": false,
+    "receipt_is_authority": false,
+    "receipt_failure_retries_execution": false,
+    "normalized_queue_contract_required": true,
+    "missing_or_ambiguous_queue_normalization": "LEAVE_READY_NOT_SELECTED"
+  },
   "live_all_execution": {
     "capability_check_before_freeze": true,
     "build_dependency_dag_before_freeze": true,
@@ -245,14 +254,8 @@
       "GITHUB_QUEUE_STATUS_AND_EVIDENCE_UPDATE"
     ],
     "never_implied": [
-      "RESET",
-      "REBASE",
-      "CLEAN",
-      "FORCE_OR_HISTORY_REWRITE",
-      "AD_HOC_PACKAGE_REPAIR",
-      "UNLISTED_RESTART",
-      "UNLISTED_HOST_CHANGE",
-      "ALTERNATE_DEPLOY_PATH"
+      "RESET", "REBASE", "CLEAN", "FORCE_OR_HISTORY_REWRITE", "AD_HOC_PACKAGE_REPAIR",
+      "UNLISTED_RESTART", "UNLISTED_HOST_CHANGE", "ALTERNATE_DEPLOY_PATH"
     ]
   },
   "failure": {
@@ -271,7 +274,9 @@
     "append_final_issue_receipt": true,
     "record_mutation_counts": true,
     "close_successful_issue": true,
-    "successful_issue_terminal_outcome": "DONE"
+    "successful_issue_terminal_outcome": "DONE",
+    "receipt_is_execution_authority": false,
+    "reporting_failure_retries_execution": false
   },
   "operator_ux": {
     "action_required_only_for_real_current_owner_decision": true,

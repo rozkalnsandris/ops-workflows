@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "policy": "Owner-authorized LIVE-AUTH v1",
+  "canonical_repository": "rozkalnsandris/ops-workflows",
+  "canonical_repository_id": 1328835922,
+  "owner_user_id": 277435981,
+  "payload_schema": "policy/schemas/live-auth-v1.schema.json",
+  "receipt_schema": "policy/schemas/deploy-receipt-v1.schema.json",
+  "authority": {
+    "transport": "GITHUB_ISSUE",
+    "title_pattern": "^\\[LIVE-AUTH\\]\\[PENDING\\] [a-z0-9][a-z0-9._-]{0,63}$",
+    "start_marker": "<!-- rozkalns-live-auth:v1 -->",
+    "end_marker": "<!-- /rozkalns-live-auth:v1 -->",
+    "fixed_ttl_seconds": 600,
+    "max_future_skew_seconds": 30,
+    "max_body_bytes": 16384,
+    "issue_must_be_open": true,
+    "pull_request_forbidden": true,
+    "actor_source": "GITHUB_SERVER_METADATA",
+    "actor_type_required": "User",
+    "actor_user_id_required": 277435981,
+    "self_declared_actor_field_is_authority": false,
+    "performed_via_github_app_requires_reviewed_operator_allowlist_when_present": true,
+    "authorization_surface_governance_must_be_reviewed": true,
+    "unknown_writer_scope_disables_mutation": true
+  },
+  "creation": {
+    "requires_explicit_current_owner_live_decision": true,
+    "never_implied_by": [
+      "START",
+      "turpini",
+      "MERGE",
+      "GITHUB-ONLY",
+      "DEPLOY-QUEUE_READY",
+      "PR_READY",
+      "historical_authorization"
+    ],
+    "one_live_auth_per_queue_item": true,
+    "create_only_after_fresh_queue_source_ci_target_revalidation": true,
+    "do_not_create_when_executor_unavailable_or_ttl_cannot_be_met": true,
+    "dummy_or_placeholder_live_auth_issue_for_testing": false
+  },
+  "binding": {
+    "queue_repository": "rozkalnsandris/ops-workflows",
+    "queue_must_be_open_ready": true,
+    "exact_fields": [
+      "source_repository",
+      "source_sha",
+      "target_alias",
+      "operation_id",
+      "expected_baseline",
+      "mutation_budget",
+      "rollback_policy",
+      "exclusions",
+      "dependencies"
+    ],
+    "raw_body_hash_required": true,
+    "canonical_payload_hash_required": true,
+    "fresh_predispatch_refetch_required": true,
+    "conditional_304_sufficient_for_authority_revalidation": false,
+    "unknown_or_drifted_state": "REJECT",
+    "normalized_queue_contract_required_before_deferred_execution": true,
+    "normalized_queue_contract_owner": "RPi5_main_P4_STATIC_OPERATION_ADAPTER",
+    "missing_or_ambiguous_queue_normalization": "NOT_EXECUTABLE_VIA_DEFERRED_PULL"
+  },
+  "executor_credential": {
+    "authorization_surface_issues_permission": "read",
+    "authorization_surface_write_permission": false,
+    "webhook_required": false,
+    "can_self_authorize": false
+  },
+  "receipts": {
+    "schema": "rozkalns.deploy-receipt.v1",
+    "authority": false,
+    "may_trigger_execution_or_retry": false,
+    "reporting_failure_replays_execution": false,
+    "writer_must_be_separate_from_authorization_reader_if_github_write_is_added": true,
+    "public_safe_only": true
+  }
+}

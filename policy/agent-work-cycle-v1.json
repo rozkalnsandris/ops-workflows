@@ -1,0 +1,61 @@
+{
+  "schema": "rozkalns.agent-work-cycle.v1",
+  "status": "ACTIVE",
+  "canonical_repository": "rozkalnsandris/ops-workflows",
+  "reference_repository": "rozkalnsandris/RPi5_main",
+  "umbrella_issue": 31,
+  "canonical_commands": {
+    "start": "START <repo>",
+    "sync": "SYNC <repo>",
+    "continue": "turpini"
+  },
+  "retrieval": {
+    "start_mode": "MINIMUM_SUFFICIENT",
+    "sync_mode": "INCREMENTAL",
+    "single_current_lane": true,
+    "repo_wide_audit_by_default": false,
+    "historical_ci_comments_reviews_by_default": false,
+    "demand_driven_expansion": true
+  },
+  "owner_gates": {
+    "merge_explicit_by_default": true,
+    "repo_local_explicit_full_mode_may_freeze_issue_scoped_merge_authority": true,
+    "merge_never_implies_live": true,
+    "live_uses_repo_local_exact_authorization": true,
+    "authorization_consumed_at_first_authorized_mutation": true,
+    "post_mutation_uncertainty_fail_closed": true,
+    "automatic_retry_rollback_cleanup": false
+  },
+  "next_command_contract": {
+    "required_on_every_user_visible_work_cycle_terminal_response": true,
+    "exactly_one_recommended_command": true,
+    "command_must_be_copy_pasteable": true,
+    "command_must_be_last_actionable_content": true,
+    "action_required_reserved_for_real_owner_gate": true,
+    "do_not_invent_owner_gate": true,
+    "selection_order": [
+      "EXACT_OWNER_AUTHORIZATION_IF_REAL_GATE_EXISTS",
+      "SYNC_REPO_WHEN_WAITING_ON_MUTABLE_GITHUB_OR_EXTERNAL_STATE",
+      "TURPINI_WHEN_SAME_SCOPE_TECHNICAL_CONTINUATION_IS_READY",
+      "START_REPO_WHEN_CURRENT_OUTCOME_IS_DONE"
+    ],
+    "never_implies_merge_or_live_authority": true
+  },
+  "rollout_repositories": [
+    "rozkalnsandris/ops-workflows",
+    "rozkalnsandris/hermes-deals",
+    "rozkalnsandris/hermes-tech",
+    "rozkalnsandris/rozkalns-cv",
+    "rozkalnsandris/rozkalns-control-center",
+    "rozkalnsandris/dashboard_RPi5",
+    "rozkalnsandris/RPi5-maintenance",
+    "rozkalnsandris/home-assistant-config",
+    "rozkalnsandris/balcony-irrigation-esp32"
+  ],
+  "explicit_exclusions": [
+    "rozkalnsandris/deploy-authorizations",
+    "rozkalnsandris/hermes-email-skill",
+    "rozkalnsandris/YouTube_Marcim"
+  ],
+  "repo_local_stricter_rules_win": true
+}

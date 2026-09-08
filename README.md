@@ -9,7 +9,8 @@ This repository contains shared GitHub-side automation and policy:
 - reusable `workflow_call` workflows;
 - FAST-LANE v2.2 Composite delivery policy;
 - the FAST-LANE v2.2 decision record and migration rationale;
-- `GITHUB-ONLY` / `LIVE-ALL` deferred deployment policy and queue;
+- Auto-Live v1 shared post-merge delivery contract;
+- legacy `GITHUB-ONLY` / `LIVE-ALL` deferred deployment policy and queue during consumer migration;
 - public-repository CI/security policy;
 - action full-SHA pinning checks;
 - public-runner safety checks;
@@ -47,6 +48,20 @@ Machine-readable invariants:
 `policy/fast-lane-v2.2.json`
 
 All owner repositories may adopt the same external vocabulary (`FAST`, `STRICT`, Ready receipt, exact merge gate, Composite Live envelope, bounded corrections) while keeping project-specific stricter safety rules and CI classification locally.
+
+## Auto-Live v1
+
+Auto-Live v1 is the shared normal-operation target for production-bearing consumers after each repository/target has explicitly migrated and activated its reviewed manifest and trusted controller path. Merge is a reconciliation trigger, not blanket live authority.
+
+Canonical shared contract:
+
+`docs/AUTO_LIVE_V1.md`
+
+Machine-readable invariants:
+
+`policy/auto-live-v1.json`
+
+`ops-workflows` remains GitHub-side only; trusted production execution stays in the consuming runtime project. No manifest means no automatic live mutation. Consumers must pin accepted production policy references to an immutable exact commit SHA.
 
 ## GITHUB-ONLY / LIVE-ALL
 

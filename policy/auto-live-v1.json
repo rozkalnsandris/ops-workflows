@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "policy": "Auto-Live v1 shared delivery contract",
+  "canonical_repository": "rozkalnsandris/ops-workflows",
+  "status": "A1_SHARED_SOURCE_POLICY_COMPATIBILITY_PHASE",
+  "source_policy_only": true,
+  "normal_operation": {
+    "target_model": "POST_MERGE_AUTO_LIVE_RECONCILIATION",
+    "github_only_live_all": "COMPATIBILITY_ONLY_UNTIL_CONSUMER_MIGRATION",
+    "delete_historical_queue_or_evidence": false
+  },
+  "merge": {
+    "is_reconciliation_trigger": true,
+    "authorizes_live_mutation": false,
+    "exact_merged_sha_required": true,
+    "exact_sha_required_ci_success": true
+  },
+  "consumer_manifest": {
+    "required_for_automatic_mutation": true,
+    "no_manifest_result": "NO_AUTOMATIC_MUTATION",
+    "bind_repository_and_target": true,
+    "bind_full_range_classifier": true,
+    "bind_required_ci": true,
+    "bind_static_operation_id": true,
+    "bind_health_postconditions": true,
+    "bind_retry_rollback_policy": true,
+    "bind_sensitive_exclusions": true
+  },
+  "classification": {
+    "known": [
+      "NO_DEPLOY",
+      "AUTO_DEPLOY_SAFE",
+      "MANUAL_ROLLOUT_REQUIRED",
+      "DB_HOST_APPLY_REQUIRED"
+    ],
+    "only_auto_mutation_class": "AUTO_DEPLOY_SAFE",
+    "manual_classes": [
+      "MANUAL_ROLLOUT_REQUIRED",
+      "DB_HOST_APPLY_REQUIRED"
+    ],
+    "unknown_or_ambiguous": "FAIL_CLOSED_NO_MUTATION",
+    "full_production_baseline_to_target_range_required": true
+  },
+  "automatic_mutation": {
+    "requires_explicit_consumer_activation": true,
+    "requires_static_operation_eligibility": true,
+    "requires_exact_target_and_baseline": true,
+    "requires_installed_adapter_identity": true,
+    "requires_deterministic_health": true,
+    "undeclared_sensitive_mutation_allowed": false
+  },
+  "concurrency": {
+    "stable_target_key_required": true,
+    "max_mutation_capable_reconciliations_per_target": 1,
+    "newer_merge_may_supersede_pending_before_mutation_only": true,
+    "supersession_requires_full_range_reclassification": true
+  },
+  "failure": {
+    "authorization_consumed_at_first_production_mutation": true,
+    "post_mutation_behavior": "PRESERVE_EVIDENCE_AND_STOP_TARGET",
+    "automatic_retry": false,
+    "automatic_cleanup": false,
+    "automatic_rollback": false,
+    "alternate_mutation_path": false
+  },
+  "execution_boundary": {
+    "ops_workflows_executes_production": false,
+    "trusted_execution_belongs_to_consumer_runtime": true,
+    "remote_desktop_commander_role": "BOOTSTRAP_RECOVERY_CONVERGENCE_OWNER_MAINTENANCE_ONLY",
+    "remote_desktop_commander_is_steady_state_detector": false,
+    "inbound_public_rpi5_webhook": false,
+    "persistent_self_hosted_public_repo_actions_deploy_runner": false,
+    "generic_ssh_command_transport": false,
+    "arbitrary_remote_shell_authority": false
+  },
+  "credentials": {
+    "prefer_short_lived_github_app_installation_token": true,
+    "pat_classic": false
+  },
+  "consumer_reference": {
+    "immutable_exact_commit_sha_required_for_production_policy": true,
+    "mutable_main_tag_or_version_branch_allowed": false
+  },
+  "a1_forbids": [
+    "RPI5_CREDENTIALS_OR_PRIVATE_KEYS",
+    "PRODUCTION_EXECUTION",
+    "HOST_OR_SYSTEMD_MUTATION",
+    "EXECUTOR_ENABLEMENT",
+    "DATABASE_OR_CLOUDFLARE_MUTATION",
+    "CONSUMER_COMPATIBILITY_REMOVAL_BEFORE_MIGRATION"
+  ]
+}

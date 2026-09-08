@@ -1,12 +1,12 @@
 # GITHUB-ONLY / LIVE-ALL v1 — deferred deployment queue
 
-**Status:** Accepted  
+**Status:** Compatibility — superseded for normal operation by Auto-Live v1; retained during consumer migration
 **Decision date:** 2026-08-25  
 **Canonical repository:** `rozkalnsandris/ops-workflows`  
 **Machine contract:** `policy/github-only-live-all-v1.json`  
 **Deferred pull authorization:** `docs/LIVE_AUTH_V1.md` / `policy/live-auth-v1.json`
 
-This policy adds an operator mode on top of FAST-LANE v2.2 Composite. Repository-local stricter trust-boundary rules always win.
+This policy is retained as a compatibility operator mode on top of FAST-LANE v2.2 Composite while consumers migrate to `docs/AUTO_LIVE_V1.md`. It remains authoritative for consumers that still depend on the deferred queue; repository-local stricter trust-boundary rules always win.
 
 ## 1. Purpose
 

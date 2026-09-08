@@ -31,6 +31,28 @@ The core operating rule is:
 
 Repository-local stricter rules in consuming projects override this shared baseline.
 
+## Auto-Live v1
+
+The shared normal-operation target is defined by:
+
+1. `docs/AUTO_LIVE_V1.md` — normative shared post-merge policy;
+2. `policy/auto-live-v1.json` — machine-readable invariants;
+3. `.github/workflows/auto-live-policy-gate.yml` — repository contract validation.
+
+Rules:
+
+- merge is a reconciliation trigger, never blanket live/root authority;
+- no consumer manifest means no automatic mutation;
+- only explicitly activated `AUTO_DEPLOY_SAFE` static operations may later auto-mutate under repository-local gates;
+- `MANUAL_ROLLOUT_REQUIRED`, `DB_HOST_APPLY_REQUIRED`, unknown/ambiguous classes and undeclared sensitive mutations stay owner-required/fail-closed;
+- classify the full proven production baseline -> target range;
+- serialize mutation-capable reconciliation per target and fail closed on drift;
+- after production mutation begins, error/ambiguity preserves evidence and stops the target unless exact retry/rollback behavior was predeclared;
+- `ops-workflows` is never the production executor and contains no RPi5 credentials, host mutation implementation or arbitrary remote shell bridge;
+- production consumers pin accepted shared policy/workflows to immutable exact commit SHAs.
+
+`GITHUB-ONLY / LIVE-ALL v1` remains compatibility-only until current consumers complete their Auto-Live migration. Preserve historical queue/evidence artifacts; do not create new normal-operation dependence on the deferred queue for an already migrated operation.
+
 ## GITHUB-ONLY / LIVE-ALL v1
 
 The canonical deferred-deployment operator mode is defined by:

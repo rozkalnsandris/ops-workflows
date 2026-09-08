@@ -1,0 +1,85 @@
+name: Auto-Live policy contract
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auto-live-policy-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Validate Auto-Live v1 shared policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          required = [
+              Path('docs/AUTO_LIVE_V1.md'),
+              Path('policy/auto-live-v1.json'),
+              Path('docs/GITHUB_ONLY_LIVE_ALL.md'),
+              Path('README.md'),
+              Path('AGENTS.md'),
+          ]
+          for path in required:
+              if not path.is_file() or path.stat().st_size == 0:
+                  raise SystemExit(f'missing Auto-Live contract file: {path}')
+
+          policy = json.loads(Path('policy/auto-live-v1.json').read_text(encoding='utf-8'))
+          if policy.get('schema_version') != 1:
+              raise SystemExit('Auto-Live schema version mismatch')
+          if policy.get('status') != 'A1_SHARED_SOURCE_POLICY_COMPATIBILITY_PHASE':
+              raise SystemExit('Auto-Live A1 status mismatch')
+          if policy.get('source_policy_only') is not True:
+              raise SystemExit('A1 must remain source-policy-only')
+          if policy.get('merge', {}).get('authorizes_live_mutation') is not False:
+              raise SystemExit('merge/live authority separation changed')
+          if policy.get('consumer_manifest', {}).get('required_for_automatic_mutation') is not True:
+              raise SystemExit('manifest gate changed')
+          if policy.get('consumer_manifest', {}).get('no_manifest_result') != 'NO_AUTOMATIC_MUTATION':
+              raise SystemExit('no-manifest fail-closed result changed')
+          if policy.get('classification', {}).get('only_auto_mutation_class') != 'AUTO_DEPLOY_SAFE':
+              raise SystemExit('automatic deploy class changed')
+          if policy.get('classification', {}).get('unknown_or_ambiguous') != 'FAIL_CLOSED_NO_MUTATION':
+              raise SystemExit('unknown-class behavior changed')
+          if policy.get('classification', {}).get('full_production_baseline_to_target_range_required') is not True:
+              raise SystemExit('full-range classification changed')
+          if policy.get('concurrency', {}).get('max_mutation_capable_reconciliations_per_target') != 1:
+              raise SystemExit('target concurrency bound changed')
+          for key in ('automatic_retry', 'automatic_cleanup', 'automatic_rollback', 'alternate_mutation_path'):
+              if policy.get('failure', {}).get(key) is not False:
+                  raise SystemExit(f'post-mutation failure invariant changed: {key}')
+          boundary = policy.get('execution_boundary', {})
+          for key in ('ops_workflows_executes_production', 'inbound_public_rpi5_webhook', 'persistent_self_hosted_public_repo_actions_deploy_runner', 'generic_ssh_command_transport', 'arbitrary_remote_shell_authority'):
+              if boundary.get(key) is not False:
+                  raise SystemExit(f'execution boundary changed: {key}')
+          if policy.get('credentials', {}).get('pat_classic') is not False:
+              raise SystemExit('PAT classic must remain forbidden')
+          if policy.get('consumer_reference', {}).get('immutable_exact_commit_sha_required_for_production_policy') is not True:
+              raise SystemExit('immutable consumer pin changed')
+
+          doc = Path('docs/AUTO_LIVE_V1.md').read_text(encoding='utf-8')
+          for marker in ('## 2. Merge is a trigger, not blanket live authority', '## 3. Required consumer binding', '## 4. Classification', '## 7. Failure semantics', '## 8. Trusted execution boundary', '## 9. `GITHUB-ONLY / LIVE-ALL` compatibility'):
+              if marker not in doc:
+                  raise SystemExit(f'missing Auto-Live document section: {marker}')
+          legacy = Path('docs/GITHUB_ONLY_LIVE_ALL.md').read_text(encoding='utf-8')
+          if 'Compatibility — superseded for normal operation by Auto-Live v1' not in legacy:
+              raise SystemExit('legacy compatibility status missing')
+          print('AUTO_LIVE_POLICY=PASS')
+          PY

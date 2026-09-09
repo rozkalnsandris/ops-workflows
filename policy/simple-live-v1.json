@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "policy": "Simple LIVE v1",
+  "status": "A5_SHARED_SIMPLE_LIVE_CONTRACT_NOT_ACTIVE",
+  "canonical_repository": "rozkalnsandris/ops-workflows",
+  "tracking_issue": 39,
+  "source_policy_only": true,
+  "activation": {
+    "consumer_mode_active": false,
+    "shared_merge_auto_migrates_consumers": false,
+    "queue_authorizes_live": false,
+    "ready_envelope_is_authority": false,
+    "fresh_explicit_owner_live_decision_required": true,
+    "owner_command_form": "LIVE <binding_sha256>",
+    "may_infer_live_from_merge_start_continue_history_or_ready_state": false
+  },
+  "entry_gate": {
+    "queue_state_required": "QUEUE_SOURCE_COMPLETE",
+    "final_exact_main_sha_required": true,
+    "required_exact_main_ci_must_pass": true,
+    "full_baseline_to_target_classification_required": true,
+    "all_obtainable_read_only_preflight_required": true,
+    "fixed_reviewed_operation_identity_required": true,
+    "consumer_rules_revalidation_required": true,
+    "shared_contract_pin_must_be_immutable_commit_sha": true,
+    "no_live_required_finishes_without_owner_gate": true,
+    "unknown_or_ambiguous_classification_blocks": true
+  },
+  "ready_envelope": {
+    "schema": "policy/schemas/simple-live-ready-v1.schema.json",
+    "canonical_json_sha256_binding_required": true,
+    "bind_queue_id": true,
+    "bind_source_repository": true,
+    "bind_exact_source_sha": true,
+    "bind_exact_target_alias": true,
+    "bind_fixed_operation_id": true,
+    "bind_operation_contract_digest": true,
+    "bind_consumer_rules_digest": true,
+    "bind_shared_contract_sha": true,
+    "bind_expected_baseline_when_available": true,
+    "bind_read_only_preflight_digest": true,
+    "bind_allowed_mutation_classes": true,
+    "bind_maximum_total_mutations": true,
+    "bind_explicit_exclusions": true,
+    "dynamic_arbitrary_operation_graph": false,
+    "arbitrary_shell_argv_or_environment_from_live_command": false
+  },
+  "owner_decision": {
+    "binding_digest_identifies_displayed_ready_envelope": true,
+    "bare_live_without_binding_digest_is_valid": false,
+    "revalidate_same_binding_immediately_before_first_mutation": true,
+    "newer_main_may_replace_approved_sha": false,
+    "changed_target_operation_baseline_rules_or_preflight_requires_new_owner_decision": true
+  },
+  "execution": {
+    "consumer_owns_fixed_reviewed_rollout_adapter": true,
+    "ops_workflows_executes_production": false,
+    "ops_workflows_stores_production_credentials": false,
+    "one_mutation_capable_owner_per_target": true,
+    "stable_target_concurrency_or_equivalent_lock_required": true,
+    "preflight_before_first_mutation": true,
+    "project_pinned_or_exact_tooling_required": true,
+    "build_once_deploy_exact_verified_artifact_when_supported": true,
+    "authorization_consumed_at_first_state_changing_operation": true,
+    "post_mutation_error_ambiguity_or_drift_behavior": "PRESERVE_EVIDENCE_AND_STOP",
+    "automatic_retry": false,
+    "automatic_rollback": false,
+    "automatic_cleanup": false,
+    "alternate_mutation_path": false,
+    "one_final_public_safe_receipt": true
+  },
+  "cloudflare_worker_alignment": {
+    "prefer_version_upload_then_exact_version_promotion": true,
+    "capture_exact_version_id": true,
+    "candidate_identity_must_match_uploaded_version": true,
+    "deploy_same_verified_version": true,
+    "gradual_rollout_default": false,
+    "worker_code_rollback_is_not_storage_rollback": true,
+    "d1_or_other_storage_mutation_is_not_implicitly_authorized": true
+  },
+  "deferred_trusted_executor": {
+    "rpi5_trust_boundary_preserved": true,
+    "existing_live_auth_v1_required_for_deferred_rpi5_execution": true,
+    "simple_live_replaces_live_auth_v1_author_identity_ttl_or_replay_rules": false,
+    "mapping_to_live_auth_must_be_lossless": true,
+    "live_auth_materialization_may_occur_before_owner_live_decision": false,
+    "ops_workflows_becomes_generic_remote_shell": false
+  },
+  "auto_live_compatibility": {
+    "auto_live_v1_is_automatically_disabled": false,
+    "queue_simple_live_is_owner_driven_by_default": true,
+    "consumer_adoption_must_select_one_final_live_mode_per_operation": true,
+    "double_execution_paths_for_same_operation_allowed": false,
+    "existing_auto_live_primitives_may_be_reused": true
+  },
+  "legacy_compatibility": {
+    "legacy_auto_run_full_remains_authoritative_until_consumer_queue_adoption": true,
+    "github_only_live_all_artifacts_preserved_during_migration": true,
+    "repository_local_stricter_rules_win": true,
+    "no_consumer_auto_migration": true
+  },
+  "forbidden_by_a5": {
+    "consumer_activation": true,
+    "live_mutation": true,
+    "cloudflare_mutation": true,
+    "database_apply": true,
+    "credential_or_secret_mutation": true,
+    "repository_settings_or_permission_mutation": true,
+    "rpi5_host_runtime_mutation": true,
+    "legacy_deprecation": true
+  }
+}

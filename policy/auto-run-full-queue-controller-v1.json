@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "policy": "AUTO-RUN FULL Queue controller state v1",
+  "canonical_repository": "rozkalnsandris/ops-workflows",
+  "tracking_issue": 39,
+  "status": "A2_SHARED_CONTROLLER_STATE_CONTRACT_NOT_ACTIVE",
+  "source_policy_only": true,
+  "activation": {
+    "executor_active": false,
+    "consumer_auto_migration": false,
+    "queue_command_active": false,
+    "legacy_auto_run_full_remains_authoritative_until_adoption": true,
+    "controller_snapshot_is_authority": false
+  },
+  "snapshot": {
+    "schema": "rozkalns.auto-run-full-queue-controller-state.v1",
+    "minimum_items": 1,
+    "maximum_items": 10,
+    "ordered_unique_positive_issue_numbers": true,
+    "required_states": [
+      "READY",
+      "ACTIVE",
+      "PAUSED",
+      "QUEUE_SOURCE_COMPLETE",
+      "STOPPED"
+    ],
+    "required_item_states": [
+      "PENDING",
+      "ACTIVE",
+      "SOURCE_COMPLETE",
+      "STOPPED"
+    ],
+    "maximum_active_items": 1,
+    "cursor_points_to_active_issue_when_active_or_paused": true,
+    "cursor_equals_queue_length_when_source_complete": true,
+    "active_issue_null_when_ready_or_source_complete": true,
+    "frozen_issue_order_may_change_after_activation": false,
+    "future_issue_auto_inclusion": false
+  },
+  "source_terminal_evidence": {
+    "required_before_advance": true,
+    "required_fields": [
+      "pr_number",
+      "merged_head_sha",
+      "exact_main_sha",
+      "exact_main_ci"
+    ],
+    "exact_main_ci_required_value": "PASS",
+    "sha_format": "LOWERCASE_40_HEX",
+    "evidence_is_authority": false
+  },
+  "transitions": {
+    "READY_to_ACTIVE": "ACTIVATE_FIRST_FROZEN_ISSUE",
+    "ACTIVE_to_ACTIVE": "ADVANCE_EXACTLY_ONE_AFTER_SOURCE_COMPLETE_EVIDENCE",
+    "ACTIVE_to_QUEUE_SOURCE_COMPLETE": "FINAL_ITEM_SOURCE_COMPLETE",
+    "ACTIVE_to_PAUSED": "PAUSE_PRESERVES_CURSOR_AND_ACTIVE_ISSUE",
+    "PAUSED_to_ACTIVE": "RESUME_SAME_CURSOR_AND_ACTIVE_ISSUE",
+    "ACTIVE_or_PAUSED_to_STOPPED": "STOP_CURRENT_ITEM_NO_ADVANCE",
+    "skip_pending_issue": false,
+    "reorder_frozen_issues": false,
+    "advance_without_source_terminal_evidence": false,
+    "automatic_resume_from_STOPPED": false
+  },
+  "determinism": {
+    "next_issue_is_frozen_issues_cursor_plus_one_only": true,
+    "github_is_canonical_external_state": true,
+    "actions_runner_queue_is_order_authority": false,
+    "chat_or_memory_is_order_authority": false,
+    "ambiguous_snapshot_result": "FAIL_CLOSED"
+  },
+  "authorization": {
+    "a2_grants_queue_wide_source_authority": false,
+    "a2_grants_queue_wide_merge_authority": false,
+    "queue_authorizes_live": false,
+    "future_batch_authority_requires_separate_reviewed_contract": true
+  },
+  "execution_boundary": {
+    "ops_workflows_executes_consumer_source_changes": false,
+    "ops_workflows_executes_production": false,
+    "ops_workflows_stores_production_credentials": false,
+    "ops_workflows_is_generic_remote_shell": false,
+    "rpi5_main_remains_trusted_host_runtime_boundary": true
+  },
+  "a2_forbids": [
+    "QUEUE_EXECUTOR_ACTIVATION",
+    "CONSUMER_AUTO_MIGRATION",
+    "QUEUE_WIDE_SOURCE_OR_MERGE_AUTHORITY",
+    "PRODUCTION_OR_LIVE_MUTATION",
+    "SECRET_OR_CREDENTIAL_CHANGE",
+    "DATABASE_APPLY",
+    "CLOUDFLARE_MUTATION",
+    "RPI5_HOST_RUNTIME_MUTATION",
+    "LEGACY_AUTO_RUN_FULL_DEPRECATION"
+  ]
+}

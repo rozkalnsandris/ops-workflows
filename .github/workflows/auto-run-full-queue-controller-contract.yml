@@ -1,0 +1,115 @@
+name: Auto-Run Full Queue controller contract
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auto-run-full-queue-controller-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  controller-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Validate A2 controller policy boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          required = [
+              Path('docs/AUTO_RUN_FULL_QUEUE_V1.md'),
+              Path('docs/AUTO_RUN_FULL_QUEUE_CONTROLLER_V1.md'),
+              Path('policy/auto-run-full-queue-v1.json'),
+              Path('policy/auto-run-full-queue-controller-v1.json'),
+              Path('policy/schemas/auto-run-full-queue-controller-state-v1.schema.json'),
+              Path('scripts/validate_auto_run_full_queue_state.py'),
+              Path('tests/auto_run_full_queue/test_controller_state.py'),
+          ]
+          for path in required:
+              if not path.is_file() or path.stat().st_size == 0:
+                  raise SystemExit(f'missing Queue controller contract file: {path}')
+
+          a1 = json.loads(Path('policy/auto-run-full-queue-v1.json').read_text(encoding='utf-8'))
+          if a1.get('status') != 'A1_SHARED_SOURCE_POLICY_DESIGN_NOT_ACTIVE':
+              raise SystemExit('A1 compatibility status changed')
+          if a1.get('activation', {}).get('command_active') is not False:
+              raise SystemExit('A1 Queue command unexpectedly active')
+          if a1.get('activation', {}).get('legacy_auto_run_full_remains_authoritative_until_adoption') is not True:
+              raise SystemExit('legacy AUTO-RUN FULL compatibility changed')
+
+          a2 = json.loads(Path('policy/auto-run-full-queue-controller-v1.json').read_text(encoding='utf-8'))
+          if a2.get('schema_version') != 1:
+              raise SystemExit('A2 controller schema version mismatch')
+          if a2.get('status') != 'A2_SHARED_CONTROLLER_STATE_CONTRACT_NOT_ACTIVE':
+              raise SystemExit('A2 controller status mismatch')
+          if a2.get('source_policy_only') is not True:
+              raise SystemExit('A2 must remain source-policy-only')
+
+          activation = a2.get('activation', {})
+          for key in ('executor_active', 'consumer_auto_migration', 'queue_command_active', 'controller_snapshot_is_authority'):
+              if activation.get(key) is not False:
+                  raise SystemExit(f'A2 activation boundary changed: {key}')
+          if activation.get('legacy_auto_run_full_remains_authoritative_until_adoption') is not True:
+              raise SystemExit('A2 legacy compatibility changed')
+
+          snapshot = a2.get('snapshot', {})
+          if snapshot.get('schema') != 'rozkalns.auto-run-full-queue-controller-state.v1':
+              raise SystemExit('A2 snapshot schema id mismatch')
+          if snapshot.get('minimum_items') != 1 or snapshot.get('maximum_items') != 10:
+              raise SystemExit('A2 Queue bounds changed')
+          if snapshot.get('maximum_active_items') != 1:
+              raise SystemExit('A2 one-active-item invariant changed')
+          if snapshot.get('frozen_issue_order_may_change_after_activation') is not False:
+              raise SystemExit('A2 frozen-order invariant changed')
+          if snapshot.get('future_issue_auto_inclusion') is not False:
+              raise SystemExit('A2 future issue auto-inclusion changed')
+
+          transitions = a2.get('transitions', {})
+          for key in ('skip_pending_issue', 'reorder_frozen_issues', 'advance_without_source_terminal_evidence', 'automatic_resume_from_STOPPED'):
+              if transitions.get(key) is not False:
+                  raise SystemExit(f'A2 deterministic transition invariant changed: {key}')
+
+          evidence = a2.get('source_terminal_evidence', {})
+          if evidence.get('required_before_advance') is not True:
+              raise SystemExit('A2 source-terminal evidence gate changed')
+          if evidence.get('exact_main_ci_required_value') != 'PASS':
+              raise SystemExit('A2 exact-main CI evidence changed')
+          if evidence.get('evidence_is_authority') is not False:
+              raise SystemExit('A2 evidence must not become authority')
+
+          auth = a2.get('authorization', {})
+          for key in ('a2_grants_queue_wide_source_authority', 'a2_grants_queue_wide_merge_authority', 'queue_authorizes_live'):
+              if auth.get(key) is not False:
+                  raise SystemExit(f'A2 authority boundary changed: {key}')
+          if auth.get('future_batch_authority_requires_separate_reviewed_contract') is not True:
+              raise SystemExit('A2 future authorization review gate changed')
+
+          boundary = a2.get('execution_boundary', {})
+          for key in ('ops_workflows_executes_consumer_source_changes', 'ops_workflows_executes_production', 'ops_workflows_stores_production_credentials', 'ops_workflows_is_generic_remote_shell'):
+              if boundary.get(key) is not False:
+                  raise SystemExit(f'A2 execution boundary changed: {key}')
+          if boundary.get('rpi5_main_remains_trusted_host_runtime_boundary') is not True:
+              raise SystemExit('A2 RPi5 trust boundary changed')
+
+          print('AUTO_RUN_FULL_QUEUE_CONTROLLER_POLICY=PASS')
+          PY
+
+      - name: Run deterministic controller tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/auto_run_full_queue -p 'test_*.py' -v

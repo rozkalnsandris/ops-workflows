@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "policy": "AUTO-RUN FULL Queue batch authorization v1",
+  "canonical_repository": "rozkalnsandris/ops-workflows",
+  "tracking_issue": 39,
+  "status": "A3_SHARED_BATCH_AUTHORIZATION_CONTRACT_NOT_ACTIVE",
+  "source_policy_only": true,
+  "activation": {
+    "queue_command_active_in_consumers": false,
+    "explicit_per_consumer_adoption_required": true,
+    "legacy_auto_run_full_remains_authoritative_until_adoption": true,
+    "shared_contract_reference_must_be_exact_commit_sha": true,
+    "one_active_queue_per_repository": true
+  },
+  "command": {
+    "target_syntax": "AUTO-RUN FULL QUEUE <owner/repo> #<issue1> ... #<issueN>",
+    "fresh_explicit_owner_command_required": true,
+    "may_be_inferred_from_start_continue_controller_or_history": false,
+    "repository_must_be_exact": true,
+    "ordered_issue_set_must_be_explicit": true,
+    "minimum_items": 1,
+    "maximum_items": 10
+  },
+  "authority": {
+    "future_adopted_queue_activation_grants_source_authority_for_all_frozen_items": true,
+    "future_adopted_queue_activation_grants_merge_authority_for_all_frozen_items": true,
+    "authority_is_dormant_until_item_becomes_active": true,
+    "maximum_simultaneously_active_items": 1,
+    "queue_authorizes_live": false,
+    "queue_authorizes_credentials_permissions_or_repository_settings": false,
+    "queue_authorizes_production_runtime_or_data_mutation": false,
+    "later_issue_or_queue_edits_expand_authority": false,
+    "chat_history_is_durable_authority": false,
+    "controller_pointer_is_authority": false
+  },
+  "durable_receipt": {
+    "schema": "rozkalns.auto-run-full-queue-auth.v1",
+    "consumer_github_surface_required_before_first_source_mutation": true,
+    "one_batch_controller_issue_per_queue_activation": true,
+    "issue_body_contains_exactly_one_authorization_block": true,
+    "controller_issue_body_must_remain_immutable_after_creation": true,
+    "edited_authorization_surface_result": "STOP_AUTHORITY_INVALID",
+    "progress_updates_use_comments_not_authorization_body": true,
+    "owner_identity_must_match_consumer_configured_owner": true,
+    "receipt_alone_without_valid_adopted_contract_is_authority": false
+  },
+  "frozen_scope": {
+    "repository_id_required": true,
+    "shared_contract_sha_required": true,
+    "activation_main_sha_required": true,
+    "consumer_rules_digest_sha256_required": true,
+    "ordered_unique_issues_required": true,
+    "per_issue_fields": [
+      "number",
+      "node_id",
+      "scope_digest_sha256"
+    ],
+    "scope_digest_basis": "CANONICAL_JSON_REPOSITORY_ISSUE_NUMBER_TITLE_BODY_V1",
+    "comments_labels_assignees_are_scope_authority": false,
+    "future_issues_auto_join": false,
+    "reorder_after_activation": false,
+    "replace_issue_after_activation": false
+  },
+  "pre_activation": {
+    "all_issues_must_be_open": true,
+    "all_issues_must_belong_to_exact_repository": true,
+    "duplicate_issue_numbers_forbidden": true,
+    "conflicting_active_queue_forbidden": true,
+    "consumer_must_have_explicitly_adopted_exact_shared_contract": true,
+    "repository_rules_must_allow_queue_mode": true,
+    "material_scope_or_trust_boundary_ambiguity_result": "STOP_BEFORE_RECEIPT"
+  },
+  "stability_barriers": {
+    "post_receipt_main_must_equal_activation_main_before_first_source_mutation": true,
+    "fresh_repository_rules_required_before_each_item_activation": true,
+    "fresh_issue_scope_digest_required_before_each_item_activation": true,
+    "fresh_issue_scope_digest_required_immediately_before_merge": true,
+    "rules_or_scope_digest_drift_result": "STOP_SCOPE_OR_RULE_DRIFT",
+    "main_may_advance_only_through_proven_completed_prior_queue_items": true,
+    "external_main_drift_result": "STOP_MAIN_DRIFT"
+  },
+  "per_item_source_authority": {
+    "allowed": [
+      "task_branch",
+      "source_docs_tests",
+      "focused_validation",
+      "scope_preserving_corrections_within_local_attempt_limit",
+      "push",
+      "draft_pr",
+      "ci_and_review_ingestion",
+      "ready_transition",
+      "exact_head_squash_merge_when_all_local_gates_pass",
+      "post_merge_read_only_verification",
+      "controller_advance_after_exact_main_evidence"
+    ],
+    "merge_requires_expected_head_sha": true,
+    "merge_requires_current_item_active": true,
+    "merge_requires_fresh_exact_head_ci_and_reviews": true,
+    "merge_requires_fresh_scope_and_rules_match": true,
+    "merge_does_not_authorize_live": true,
+    "source_push_after_frozen_merge_head_without_revalidation": false
+  },
+  "stop_conditions": {
+    "issue_scope_drift": true,
+    "repository_rules_drift": true,
+    "trust_boundary_or_risk_class_change": true,
+    "dependency_order_ambiguity": true,
+    "conflicting_pr_or_queue_authority": true,
+    "unexpected_external_main_drift": true,
+    "failed_or_ambiguous_item_may_be_skipped": false,
+    "automatic_queue_rewrite": false,
+    "automatic_reactivation_after_stop": false
+  },
+  "completion": {
+    "all_items_require_exact_main_source_terminal_evidence": true,
+    "final_result_before_live_classification": "QUEUE_SOURCE_COMPLETE",
+    "final_read_only_reconciliation_required": true,
+    "no_live_change": "DONE_WITHOUT_LIVE_GATE",
+    "live_change": "PAUSED_OWNER_LIVE_GATE",
+    "final_live_requires_separate_authorization": true
+  },
+  "a3_forbids": [
+    "QUEUE_MODE_ACTIVATION_IN_ANY_CONSUMER",
+    "CONSUMER_AUTO_MIGRATION",
+    "LIVE_AUTHORITY",
+    "PRODUCTION_OR_RUNTIME_MUTATION",
+    "SECRET_OR_CREDENTIAL_CHANGE",
+    "REPOSITORY_SETTINGS_OR_PERMISSION_CHANGE",
+    "DATABASE_APPLY",
+    "CLOUDFLARE_MUTATION",
+    "RPI5_HOST_RUNTIME_MUTATION",
+    "LEGACY_AUTO_RUN_FULL_DEPRECATION"
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rozkalnsandris/ops-workflows/policy/schemas/auto-run-full-queue-adoption-v1.schema.json",
+  "title": "AUTO-RUN FULL Queue consumer adoption v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "repository",
+    "shared_contract_sha",
+    "adoption_phase",
+    "queue",
+    "final_live",
+    "boundaries"
+  ],
+  "properties": {
+    "schema": {
+      "const": "rozkalns.auto-run-full-queue-adoption.v1"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "shared_contract_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "adoption_phase": {
+      "enum": [
+        "SOURCE_ONLY_CANARY",
+        "LIVE_CANARY_READY",
+        "MIGRATED"
+      ]
+    },
+    "queue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command_active",
+        "maximum_items",
+        "maximum_active_items",
+        "batch_source_authority",
+        "batch_merge_authority",
+        "live_authority"
+      ],
+      "properties": {
+        "command_active": {"const": true},
+        "maximum_items": {"type": "integer", "minimum": 1, "maximum": 10},
+        "maximum_active_items": {"const": 1},
+        "batch_source_authority": {"const": true},
+        "batch_merge_authority": {"const": true},
+        "live_authority": {"const": false}
+      }
+    },
+    "final_live": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "double_execution_paths_allowed",
+        "deferred_rpi5_requires_live_auth_v1"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "DISABLED",
+            "SIMPLE_LIVE_OWNER_DRIVEN",
+            "AUTO_LIVE_V1_STATIC"
+          ]
+        },
+        "double_execution_paths_allowed": {"const": false},
+        "deferred_rpi5_requires_live_auth_v1": {"const": true}
+      }
+    },
+    "boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ops_workflows_executes_production",
+        "ops_workflows_stores_production_credentials",
+        "consumer_owns_rollout_adapter",
+        "repository_local_stricter_rules_win"
+      ],
+      "properties": {
+        "ops_workflows_executes_production": {"const": false},
+        "ops_workflows_stores_production_credentials": {"const": false},
+        "consumer_owns_rollout_adapter": {"const": true},
+        "repository_local_stricter_rules_win": {"const": true}
+      }
+    }
+  }
+}

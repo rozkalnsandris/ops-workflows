@@ -10,6 +10,7 @@ This repository contains shared GitHub-side automation and policy:
 - FAST-LANE v2.2 Composite delivery policy;
 - the FAST-LANE v2.2 decision record and migration rationale;
 - Auto-Live v1 shared post-merge delivery contract;
+- AUTO-RUN FULL Queue v1 shared source-policy design;
 - legacy `GITHUB-ONLY` / `LIVE-ALL` deferred deployment policy and queue during consumer migration;
 - public-repository CI/security policy;
 - action full-SHA pinning checks;
@@ -62,6 +63,36 @@ Machine-readable invariants:
 `policy/auto-live-v1.json`
 
 `ops-workflows` remains GitHub-side only; trusted production execution stays in the consuming runtime project. No manifest means no automatic live mutation. Consumers must pin accepted production policy references to an immutable exact commit SHA.
+
+## AUTO-RUN FULL Queue v1
+
+AUTO-RUN FULL Queue v1 is the shared **source-policy design** for higher-throughput sequential implementation: up to ten explicitly named issues may be frozen into one ordered queue, but only one issue is active at a time.
+
+Target lifecycle:
+
+```text
+frozen issues
+-> one ACTIVE issue
+-> source / PR / CI / review / merge / exact-main verification
+-> next issue
+-> final exact-main + read-only preflight
+-> one final owner LIVE decision only if live mutation is required
+-> fixed reviewed consumer rollout
+```
+
+Canonical design:
+
+`docs/AUTO_RUN_FULL_QUEUE_V1.md`
+
+Machine-readable A1 invariants:
+
+`policy/auto-run-full-queue-v1.json`
+
+A1 is intentionally **not active in consumers**. Existing repository-local AUTO-RUN FULL contracts remain authoritative until a consumer explicitly adopts a later completed Queue contract pinned to an immutable `ops-workflows` commit SHA. A shared-policy merge never auto-migrates a repository and never grants queue-wide merge or LIVE authority.
+
+The Simple LIVE direction is intentionally narrow: exact SHA + exact target + one fixed reviewed consumer operation, with read-only preflight first, per-target serialization, fail-closed post-mutation behavior and one final receipt. `ops-workflows` remains policy/guard infrastructure rather than a generic production executor.
+
+Tracking issue: `#39`.
 
 ## GITHUB-ONLY / LIVE-ALL
 

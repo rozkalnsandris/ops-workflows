@@ -1,0 +1,146 @@
+name: Auto-Run Full Queue policy contract
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auto-run-full-queue-policy-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Validate AUTO-RUN FULL Queue v1 A1 contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          required = [
+              Path('docs/AUTO_RUN_FULL_QUEUE_V1.md'),
+              Path('policy/auto-run-full-queue-v1.json'),
+              Path('README.md'),
+              Path('AGENTS.md'),
+          ]
+          for path in required:
+              if not path.is_file() or path.stat().st_size == 0:
+                  raise SystemExit(f'missing Queue contract file: {path}')
+
+          policy = json.loads(Path('policy/auto-run-full-queue-v1.json').read_text(encoding='utf-8'))
+          if policy.get('schema_version') != 1:
+              raise SystemExit('Queue schema version mismatch')
+          if policy.get('status') != 'A1_SHARED_SOURCE_POLICY_DESIGN_NOT_ACTIVE':
+              raise SystemExit('Queue A1 status mismatch')
+          if policy.get('source_policy_only') is not True:
+              raise SystemExit('Queue A1 must remain source-policy-only')
+
+          activation = policy.get('activation', {})
+          if activation.get('command_active') is not False:
+              raise SystemExit('Queue command must not be active in A1')
+          if activation.get('consumer_auto_migration') is not False:
+              raise SystemExit('consumer auto-migration must remain disabled')
+          if activation.get('explicit_per_consumer_adoption_required') is not True:
+              raise SystemExit('explicit per-consumer adoption gate changed')
+          if activation.get('legacy_auto_run_full_remains_authoritative_until_adoption') is not True:
+              raise SystemExit('legacy AUTO-RUN FULL compatibility changed')
+          if activation.get('consumer_reference_must_pin_immutable_commit_sha') is not True:
+              raise SystemExit('immutable consumer pin requirement changed')
+
+          queue = policy.get('queue', {})
+          if queue.get('minimum_items') != 1 or queue.get('maximum_items') != 10:
+              raise SystemExit('Queue item bounds changed')
+          if queue.get('ordered_explicit_issue_set_required') is not True:
+              raise SystemExit('frozen explicit queue order changed')
+          if queue.get('all_open_issues_semantics') is not False:
+              raise SystemExit('Queue must never mean all open issues')
+          if queue.get('future_issue_auto_inclusion') is not False:
+              raise SystemExit('future issues must not auto-join Queue')
+          if queue.get('maximum_active_items_per_repository_controller') != 1:
+              raise SystemExit('one-active-item invariant changed')
+          if queue.get('github_is_canonical_state') is not True:
+              raise SystemExit('GitHub canonical state invariant changed')
+          if queue.get('actions_queue_is_canonical_issue_order') is not False:
+              raise SystemExit('Actions queue must not become issue-order authority')
+          if queue.get('deterministic_next_item_transition_required') is not True:
+              raise SystemExit('deterministic Queue transition changed')
+          if queue.get('skip_failed_or_ambiguous_item') is not False:
+              raise SystemExit('failed/ambiguous Queue item must not be skipped')
+
+          auth = policy.get('authorization', {})
+          for key in ('a1_grants_queue_wide_source_authority', 'a1_grants_queue_wide_merge_authority', 'queue_authorizes_live', 'controller_state_is_authority', 'chat_history_is_authority', 'later_issue_edits_expand_frozen_scope'):
+              if auth.get(key) is not False:
+                  raise SystemExit(f'A1 authority invariant changed: {key}')
+          if auth.get('future_batch_source_and_merge_authority_requires_explicit_reviewed_contract') is not True:
+              raise SystemExit('future batch authority review gate changed')
+
+          live = policy.get('simple_live', {})
+          if live.get('owner_decision_count_target') != 1:
+              raise SystemExit('Simple LIVE owner-decision target changed')
+          if live.get('fixed_reviewed_operation_identity_required') is not True:
+              raise SystemExit('fixed reviewed LIVE operation identity changed')
+          if live.get('bind_exact_git_sha') is not True or live.get('bind_exact_target') is not True:
+              raise SystemExit('exact SHA/target binding changed')
+          if live.get('dynamic_arbitrary_operation_graph') is not False:
+              raise SystemExit('dynamic arbitrary LIVE operation graph must remain disabled')
+          if live.get('preflight_before_first_mutation') is not True:
+              raise SystemExit('preflight-first invariant changed')
+          if live.get('max_mutation_capable_rollouts_per_target') != 1:
+              raise SystemExit('target mutation concurrency bound changed')
+
+          failure = policy.get('failure', {})
+          if failure.get('authorization_consumed_at_first_mutation') is not True:
+              raise SystemExit('authorization-consumption invariant changed')
+          for key in ('automatic_retry', 'automatic_rollback', 'automatic_cleanup', 'alternate_mutation_path'):
+              if failure.get(key) is not False:
+                  raise SystemExit(f'post-mutation failure invariant changed: {key}')
+
+          boundary = policy.get('execution_boundary', {})
+          for key in ('ops_workflows_executes_production', 'ops_workflows_stores_production_credentials', 'ops_workflows_is_generic_remote_shell', 'ops_workflows_owns_rpi5_privileged_helpers', 'ops_workflows_owns_consumer_database_apply'):
+              if boundary.get(key) is not False:
+                  raise SystemExit(f'ops-workflows boundary changed: {key}')
+          if boundary.get('rpi5_main_remains_trusted_host_runtime_boundary') is not True:
+              raise SystemExit('RPi5 trust boundary changed')
+
+          compatibility = policy.get('compatibility', {})
+          if compatibility.get('shared_policy_merge_changes_consumer_behavior') is not False:
+              raise SystemExit('shared-policy merge must not auto-change consumers')
+          if compatibility.get('repository_local_stricter_rules_win') is not True:
+              raise SystemExit('local precedence changed')
+
+          doc = Path('docs/AUTO_RUN_FULL_QUEUE_V1.md').read_text(encoding='utf-8')
+          for marker in (
+              '## 2. Compatibility-first migration',
+              '## 3. Queue identity and scope',
+              '## 4. One active issue',
+              '## 6. Queue activation authority — design boundary',
+              '## 10. Simple LIVE — one decision, fixed reviewed rollout',
+              '## 13. Shared and consumer boundaries',
+              '## 14. Consumer adoption sequence',
+          ):
+              if marker not in doc:
+                  raise SystemExit(f'missing Queue document section: {marker}')
+
+          agents = Path('AGENTS.md').read_text(encoding='utf-8')
+          readme = Path('README.md').read_text(encoding='utf-8')
+          required_text = 'AUTO-RUN FULL Queue v1'
+          if required_text not in agents:
+              raise SystemExit('AGENTS Queue compatibility note missing')
+          if required_text not in readme:
+              raise SystemExit('README Queue compatibility note missing')
+
+          print('AUTO_RUN_FULL_QUEUE_POLICY=PASS')
+          PY

@@ -1,0 +1,100 @@
+name: Auto-Run Full Queue guards contract
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'policy/auto-run-full-queue-guards-v1.json'
+      - 'policy/schemas/auto-run-full-queue-adoption-v1.schema.json'
+      - 'scripts/validate_auto_run_full_queue_guards.py'
+      - 'tests/auto_run_full_queue/**'
+      - '.github/workflows/auto-run-full-queue-adoption-guard.yml'
+      - '.github/workflows/auto-run-full-queue-guards-contract.yml'
+      - 'policy/auto-run-full-queue-v1.json'
+      - 'policy/auto-run-full-queue-controller-v1.json'
+      - 'policy/auto-run-full-queue-authorization-v1.json'
+      - 'policy/auto-run-full-queue-resume-v1.json'
+      - 'policy/simple-live-v1.json'
+      - 'policy/auto-live-v1.json'
+  pull_request:
+    paths:
+      - 'policy/auto-run-full-queue-guards-v1.json'
+      - 'policy/schemas/auto-run-full-queue-adoption-v1.schema.json'
+      - 'scripts/validate_auto_run_full_queue_guards.py'
+      - 'tests/auto_run_full_queue/**'
+      - '.github/workflows/auto-run-full-queue-adoption-guard.yml'
+      - '.github/workflows/auto-run-full-queue-guards-contract.yml'
+      - 'policy/auto-run-full-queue-v1.json'
+      - 'policy/auto-run-full-queue-controller-v1.json'
+      - 'policy/auto-run-full-queue-authorization-v1.json'
+      - 'policy/auto-run-full-queue-resume-v1.json'
+      - 'policy/simple-live-v1.json'
+      - 'policy/auto-live-v1.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guards-contract:
+    name: Queue guards composition and reusable workflow
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate JSON syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m json.tool policy/auto-run-full-queue-guards-v1.json >/dev/null
+          python3 -m json.tool policy/schemas/auto-run-full-queue-adoption-v1.schema.json >/dev/null
+
+      - name: Validate A1-A5 composition invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/validate_auto_run_full_queue_guards.py --canonical-root . --composition-only
+
+      - name: Run Queue guard regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest tests.auto_run_full_queue.test_queue_guards -v
+
+      - name: Validate reusable workflow safety surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/auto-run-full-queue-adoption-guard.yml')
+          text = path.read_text(encoding='utf-8')
+          required = [
+              'workflow_call:',
+              'permissions:\n  contents: read',
+              'runs-on: ubuntu-24.04',
+              'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
+              'persist-credentials: false',
+              '--expected-repository "$EXPECTED_REPOSITORY"',
+              '--expected-sha "$CANONICAL_POLICY_SHA"',
+              '--caller-root .',
+          ]
+          missing = [item for item in required if item not in text]
+          if missing:
+              raise SystemExit('guard workflow missing invariant(s): ' + ', '.join(missing))
+          if 'permissions: write-all' in text:
+              raise SystemExit('guard workflow must not use write-all')
+          if text.count('persist-credentials: false') < 2:
+              raise SystemExit('both caller and canonical checkout must disable persisted credentials')
+          if 'secrets: inherit' in text:
+              raise SystemExit('guard workflow must not inherit caller secrets')
+          print('QUEUE_REUSABLE_GUARD_SURFACE=PASS')
+          print('MUTATION=NO')
+          PY

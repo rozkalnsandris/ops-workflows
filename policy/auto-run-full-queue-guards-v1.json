@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "policy": "AUTO-RUN FULL Queue reusable guards v1",
+  "status": "A6_SHARED_REUSABLE_GUARDS_NOT_ACTIVE",
+  "canonical_repository": "rozkalnsandris/ops-workflows",
+  "tracking_issue": 39,
+  "source_policy_only": true,
+  "purpose": "COMPOSE_A1_THROUGH_A5_AND_FAIL_CLOSED_CONSUMER_ADOPTION",
+  "composition": {
+    "required_shared_policies": [
+      "policy/auto-run-full-queue-v1.json",
+      "policy/auto-run-full-queue-controller-v1.json",
+      "policy/auto-run-full-queue-authorization-v1.json",
+      "policy/auto-run-full-queue-resume-v1.json",
+      "policy/simple-live-v1.json",
+      "policy/auto-live-v1.json"
+    ],
+    "all_shared_slices_remain_source_policy_only": true,
+    "queue_command_remains_inactive_in_shared_repository": true,
+    "maximum_queue_items": 10,
+    "maximum_active_items": 1,
+    "future_adopted_batch_source_authority": true,
+    "future_adopted_batch_merge_authority": true,
+    "queue_live_authority": false,
+    "resume_signal_is_authority": false,
+    "ready_live_envelope_is_authority": false,
+    "merge_authorizes_live": false,
+    "ops_workflows_executes_production": false,
+    "rpi5_trust_boundary_preserved": true,
+    "deferred_rpi5_requires_live_auth_v1": true,
+    "double_final_live_execution_paths_allowed": false
+  },
+  "consumer_adoption": {
+    "manifest_schema": "policy/schemas/auto-run-full-queue-adoption-v1.schema.json",
+    "default_manifest_path": ".github/auto-run-full-queue-adoption-v1.json",
+    "explicit_per_repository_adoption_required": true,
+    "shared_contract_sha_must_be_lowercase_40_hex": true,
+    "reusable_guard_reference_must_match_manifest_sha": true,
+    "repository_identity_must_match_caller": true,
+    "allowed_phases": [
+      "SOURCE_ONLY_CANARY",
+      "LIVE_CANARY_READY",
+      "MIGRATED"
+    ],
+    "source_only_canary_final_live_mode": "DISABLED",
+    "allowed_final_live_modes_after_source_canary": [
+      "SIMPLE_LIVE_OWNER_DRIVEN",
+      "AUTO_LIVE_V1_STATIC"
+    ],
+    "one_final_live_mode_per_operation": true,
+    "consumer_local_stricter_rules_win": true,
+    "shared_guard_can_activate_consumer": false
+  },
+  "reusable_workflow": {
+    "path": ".github/workflows/auto-run-full-queue-adoption-guard.yml",
+    "workflow_call_only": true,
+    "permissions": "CONTENTS_READ_ONLY",
+    "checks_out_caller_without_persisted_credentials": true,
+    "checks_out_canonical_policy_at_exact_input_sha": true,
+    "accepts_secrets": false,
+    "performs_mutation": false,
+    "production_executor": false
+  },
+  "fail_closed": {
+    "missing_manifest": true,
+    "mutable_or_malformed_shared_sha": true,
+    "caller_repository_mismatch": true,
+    "caller_workflow_pin_mismatch": true,
+    "queue_live_authority_true": true,
+    "more_than_one_active_item": true,
+    "source_canary_with_live_enabled": true,
+    "double_final_live_path": true,
+    "rpi5_live_auth_bypass": true,
+    "shared_contract_composition_drift": true,
+    "unknown_field_or_mode": true
+  },
+  "a6_forbids": [
+    "CONSUMER_ACTIVATION",
+    "QUEUE_EXECUTOR_ACTIVATION",
+    "LIVE_AUTHORITY",
+    "PRODUCTION_OR_RUNTIME_MUTATION",
+    "SECRET_OR_CREDENTIAL_ACCESS_OR_MUTATION",
+    "REPOSITORY_SETTINGS_OR_PERMISSION_MUTATION",
+    "DATABASE_APPLY",
+    "CLOUDFLARE_MUTATION",
+    "RPI5_HOST_RUNTIME_MUTATION",
+    "LEGACY_DEPRECATION"
+  ]
+}

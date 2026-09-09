@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "policy": "AUTO-RUN FULL Queue resume/event/watchdog v1",
+  "status": "A4_SHARED_RESUME_CONTRACT_NOT_ACTIVE",
+  "source_policy_only": true,
+  "canonical_repository": "rozkalnsandris/ops-workflows",
+  "tracking_issue": 39,
+  "parent_contracts": [
+    "docs/AUTO_RUN_FULL_QUEUE_V1.md",
+    "docs/AUTO_RUN_FULL_QUEUE_CONTROLLER_V1.md",
+    "docs/AUTO_RUN_FULL_QUEUE_AUTHORIZATION_V1.md"
+  ],
+  "activation": {
+    "consumer_event_resume_active": false,
+    "consumer_watchdog_active": false,
+    "consumer_auto_migration": false,
+    "legacy_auto_run_full_remains_authoritative_until_adoption": true
+  },
+  "principle": "TRIGGER_WAKES_CONTROLLER_CANONICAL_GITHUB_REFRESH_DECIDES_ACTION",
+  "canonical_state": {
+    "github_is_authority": true,
+    "event_payload_is_authority": false,
+    "watchdog_tick_is_authority": false,
+    "chat_history_is_authority": false,
+    "runner_queue_order_is_authority": false,
+    "controller_must_refresh_before_action": true,
+    "event_never_directly_advances_cursor": true
+  },
+  "resume_sources": {
+    "primary": "GITHUB_EVENT_TRIGGERED_TASK",
+    "fallback": "SCHEDULED_WATCHDOG",
+    "manual": "MANUAL_CONTINUATION",
+    "reference_watchdog_interval_minutes": 60,
+    "watchdog_is_timing_sla": false
+  },
+  "event_families": {
+    "allowlist": [
+      "issues",
+      "issue_comment",
+      "pull_request",
+      "pull_request_review",
+      "pull_request_review_comment",
+      "check_suite",
+      "check_run",
+      "status",
+      "push"
+    ],
+    "unknown_event_behavior": "IGNORE",
+    "delivery_id_dedup_preferred_when_available": true,
+    "duplicate_delivery_must_be_safe": true,
+    "out_of_order_delivery_must_be_safe": true,
+    "event_body_must_not_expand_scope_or_authority": true
+  },
+  "after_wake_revalidation": {
+    "find_current_consumer_controller_from_github": true,
+    "revalidate_batch_authority_before_source_or_merge": true,
+    "revalidate_active_issue_and_frozen_scope": true,
+    "revalidate_repository_rules": true,
+    "revalidate_main_chain": true,
+    "revalidate_exact_pr_head_ci_reviews_when_relevant": true,
+    "stop_on_unprovable_or_drifted_state": true
+  },
+  "queue_state_behavior": {
+    "READY": "NO_AUTO_ACTIVATION",
+    "ACTIVE": "RESUME_SAME_ACTIVE_ITEM_AFTER_REFRESH",
+    "PAUSED": "RESUME_SAME_ACTIVE_ITEM_ONLY_IF_REFRESH_AND_AUTHORITY_PASS",
+    "QUEUE_SOURCE_COMPLETE": "READ_ONLY_FINAL_RECONCILIATION_ONLY",
+    "STOPPED": "NO_AUTO_RESUME"
+  },
+  "owner_gate_behavior": {
+    "owner_gate_is_not_bypassed_by_event": true,
+    "owner_gate_is_not_bypassed_by_watchdog": true,
+    "queue_resume_never_grants_live": true,
+    "legacy_merge_gate_remains_when_consumer_has_not_adopted_a3": true
+  },
+  "watchdog": {
+    "purpose": "RECOVER_FROM_MISSED_OR_DELAYED_PRIMARY_WAKEUPS",
+    "poll_only_minimum_canonical_state_needed": true,
+    "must_not_reorder_or_skip": true,
+    "must_not_auto_resume_stopped": true,
+    "must_not_create_new_queue_authority": true,
+    "must_not_create_live_authority": true,
+    "duplicate_primary_and_watchdog_wakeups_are_idempotent": true
+  },
+  "execution_boundary": {
+    "ops_workflows_receives_or_stores_webhook_secrets": false,
+    "ops_workflows_runs_consumer_source_executor": false,
+    "ops_workflows_runs_production_executor": false,
+    "ops_workflows_is_generic_remote_shell": false,
+    "rpi5_main_remains_trusted_host_runtime_boundary": true
+  }
+}

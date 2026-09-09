@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rozkalnsandris/ops-workflows/policy/schemas/auto-run-full-queue-resume-signal-v1.schema.json",
+  "title": "AUTO-RUN FULL Queue resume signal v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "repository",
+    "repository_id",
+    "source",
+    "event_name",
+    "event_action",
+    "delivery_id",
+    "observed_at",
+    "target_issue_number",
+    "target_pr_number"
+  ],
+  "properties": {
+    "schema": {
+      "const": "rozkalns.auto-run-full-queue-resume-signal.v1"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "repository_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "source": {
+      "enum": [
+        "GITHUB_EVENT",
+        "WATCHDOG",
+        "MANUAL_CONTINUATION"
+      ]
+    },
+    "event_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "event_action": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "delivery_id": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "observed_at": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "target_issue_number": {
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "target_pr_number": {
+      "type": ["integer", "null"],
+      "minimum": 1
+    }
+  }
+}

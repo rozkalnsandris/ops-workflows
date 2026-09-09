@@ -1,0 +1,167 @@
+name: Auto-Run Full Queue resume contract
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auto-run-full-queue-resume-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Run Queue resume tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest -v tests.auto_run_full_queue.test_resume_contract
+
+      - name: Validate A4 resume boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          required = [
+              Path('docs/AUTO_RUN_FULL_QUEUE_RESUME_V1.md'),
+              Path('policy/auto-run-full-queue-resume-v1.json'),
+              Path('policy/schemas/auto-run-full-queue-resume-signal-v1.schema.json'),
+              Path('scripts/validate_auto_run_full_queue_resume.py'),
+              Path('tests/auto_run_full_queue/test_resume_contract.py'),
+          ]
+          for path in required:
+              if not path.is_file() or path.stat().st_size == 0:
+                  raise SystemExit(f'missing A4 resume contract file: {path}')
+
+          policy = json.loads(Path('policy/auto-run-full-queue-resume-v1.json').read_text())
+          if policy.get('status') != 'A4_SHARED_RESUME_CONTRACT_NOT_ACTIVE':
+              raise SystemExit('A4 status mismatch')
+          if policy.get('source_policy_only') is not True:
+              raise SystemExit('A4 must remain source-policy-only')
+
+          activation = policy['activation']
+          for key in (
+              'consumer_event_resume_active',
+              'consumer_watchdog_active',
+              'consumer_auto_migration',
+          ):
+              if activation[key] is not False:
+                  raise SystemExit(f'A4 activation boundary changed: {key}')
+          if activation['legacy_auto_run_full_remains_authoritative_until_adoption'] is not True:
+              raise SystemExit('legacy AUTO-RUN FULL compatibility changed')
+
+          canonical = policy['canonical_state']
+          if canonical['github_is_authority'] is not True:
+              raise SystemExit('GitHub canonical-state invariant changed')
+          for key in (
+              'event_payload_is_authority',
+              'watchdog_tick_is_authority',
+              'chat_history_is_authority',
+              'runner_queue_order_is_authority',
+          ):
+              if canonical[key] is not False:
+                  raise SystemExit(f'A4 authority boundary changed: {key}')
+          if canonical['controller_must_refresh_before_action'] is not True:
+              raise SystemExit('fresh canonical refresh requirement changed')
+          if canonical['event_never_directly_advances_cursor'] is not True:
+              raise SystemExit('event must never directly advance Queue cursor')
+
+          sources = policy['resume_sources']
+          if sources['primary'] != 'GITHUB_EVENT_TRIGGERED_TASK':
+              raise SystemExit('A4 primary resume source changed')
+          if sources['fallback'] != 'SCHEDULED_WATCHDOG':
+              raise SystemExit('A4 watchdog fallback changed')
+          if sources['manual'] != 'MANUAL_CONTINUATION':
+              raise SystemExit('A4 manual continuation source changed')
+          if sources['reference_watchdog_interval_minutes'] != 60:
+              raise SystemExit('A4 reference watchdog cadence changed')
+          if sources['watchdog_is_timing_sla'] is not False:
+              raise SystemExit('watchdog must not become timing SLA')
+
+          events = policy['event_families']
+          required_events = {
+              'issues',
+              'issue_comment',
+              'pull_request',
+              'pull_request_review',
+              'pull_request_review_comment',
+              'check_suite',
+              'check_run',
+              'status',
+              'push',
+          }
+          if set(events['allowlist']) != required_events:
+              raise SystemExit('A4 event family allowlist changed')
+          if events['unknown_event_behavior'] != 'IGNORE':
+              raise SystemExit('unknown event behavior must remain IGNORE')
+          for key in (
+              'duplicate_delivery_must_be_safe',
+              'out_of_order_delivery_must_be_safe',
+          ):
+              if events[key] is not True:
+                  raise SystemExit(f'A4 idempotence invariant changed: {key}')
+          if events['event_body_must_not_expand_scope_or_authority'] is not True:
+              raise SystemExit('event payload must not expand authority')
+
+          behavior = policy['queue_state_behavior']
+          expected = {
+              'READY': 'NO_AUTO_ACTIVATION',
+              'ACTIVE': 'RESUME_SAME_ACTIVE_ITEM_AFTER_REFRESH',
+              'PAUSED': 'RESUME_SAME_ACTIVE_ITEM_ONLY_IF_REFRESH_AND_AUTHORITY_PASS',
+              'QUEUE_SOURCE_COMPLETE': 'READ_ONLY_FINAL_RECONCILIATION_ONLY',
+              'STOPPED': 'NO_AUTO_RESUME',
+          }
+          if behavior != expected:
+              raise SystemExit('A4 queue-state resume behavior changed')
+
+          owner = policy['owner_gate_behavior']
+          for key in (
+              'owner_gate_is_not_bypassed_by_event',
+              'owner_gate_is_not_bypassed_by_watchdog',
+              'queue_resume_never_grants_live',
+              'legacy_merge_gate_remains_when_consumer_has_not_adopted_a3',
+          ):
+              if owner[key] is not True:
+                  raise SystemExit(f'A4 owner-gate invariant changed: {key}')
+
+          watchdog = policy['watchdog']
+          for key in (
+              'must_not_reorder_or_skip',
+              'must_not_auto_resume_stopped',
+              'must_not_create_new_queue_authority',
+              'must_not_create_live_authority',
+              'duplicate_primary_and_watchdog_wakeups_are_idempotent',
+          ):
+              if watchdog[key] is not True:
+                  raise SystemExit(f'A4 watchdog boundary changed: {key}')
+
+          boundary = policy['execution_boundary']
+          for key in (
+              'ops_workflows_receives_or_stores_webhook_secrets',
+              'ops_workflows_runs_consumer_source_executor',
+              'ops_workflows_runs_production_executor',
+              'ops_workflows_is_generic_remote_shell',
+          ):
+              if boundary[key] is not False:
+                  raise SystemExit(f'A4 execution boundary changed: {key}')
+          if boundary['rpi5_main_remains_trusted_host_runtime_boundary'] is not True:
+              raise SystemExit('RPi5 trust boundary changed')
+
+          print('AUTO_RUN_FULL_QUEUE_RESUME_A4=PASS')
+          PY

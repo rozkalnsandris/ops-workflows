@@ -24,7 +24,7 @@ The core operating rule is:
 - Use one Ready receipt; refresh mutable state again immediately before merge.
 - Composite Live authority must bind exact SHA/ref, exact target, allowed mutation categories, explicit exclusions, and baseline/operation limits where practical.
 - Candidate verification must prove that the observed candidate identity equals the exact uploaded artifact/version identity. HTTP success alone is insufficient when routing can fall back to another active version.
-- When a platform requires a candidate to be attached to the active deployment before exact-version verification, a pre-enumerated zero-normal-traffic attachment plus later promotion may share one Composite Live owner gate. Both remain separate live mutations and must be counted and bounded in the authorization envelope.
+- When a platform requires the candidate to be attached to the active deployment before exact-version verification, a pre-enumerated zero-normal-traffic attachment plus later promotion may share one Composite Live owner gate. Both remain separate live mutations and must be counted and bounded in the authorization envelope.
 - Authorization is consumed when the first authorized mutation starts. After that, error, ambiguity, drift, or new risk means preserve evidence and STOP; do not automatically retry, rollback, clean up, rebase, reset, or choose an alternate mutation path unless that behavior was explicitly pre-authorized.
 - When an owner decision remains, report status first and place one visible `ACTION REQUIRED` section at the end, using a copyable fenced `bash` block when practical.
 - Merge remains explicit owner authority. Merge does not authorize deployment or any other live mutation.
@@ -52,6 +52,30 @@ Rules:
 - production consumers pin accepted shared policy/workflows to immutable exact commit SHAs.
 
 `GITHUB-ONLY / LIVE-ALL v1` remains compatibility-only until current consumers complete their Auto-Live migration. Preserve historical queue/evidence artifacts; do not create new normal-operation dependence on the deferred queue for an already migrated operation.
+
+## AUTO-RUN FULL Queue v1
+
+Shared design surfaces:
+
+1. `docs/AUTO_RUN_FULL_QUEUE_V1.md` — normative queue and Simple LIVE design;
+2. `policy/auto-run-full-queue-v1.json` — machine-readable A1 invariants;
+3. `.github/workflows/auto-run-full-queue-policy-gate.yml` — repository contract validation;
+4. issue #39 — design/migration tracking.
+
+**A1 is source-policy design only and is not an active consumer mode.**
+
+- Existing consumer AUTO-RUN FULL contracts remain authoritative until that exact repository explicitly adopts a later completed Queue contract.
+- Shared-policy merge never auto-migrates a consumer.
+- Target queue size is 1–10 explicitly named ordered issues; it never means all open or future issues.
+- At most one queued issue is ACTIVE per repository controller.
+- Every queued item retains its own issue, branch, PR, exact-head CI/review, merge identity and exact-main verification.
+- A1 does not grant queue-wide source authority, queue-wide merge authority or LIVE authority.
+- A future batch source+merge authorization requires a separately reviewed machine contract before activation.
+- After all source items complete, perform final exact-main/read-only reconciliation and ask once for LIVE only when a live mutation is actually required.
+- Simple LIVE should bind exact SHA, target and a fixed reviewed consumer rollout identity rather than introduce a generic dynamic operation engine.
+- `ops-workflows` remains GitHub-side policy/guard infrastructure; consumer repositories own fixed rollout adapters/credentials and `RPi5_main` remains the trusted host/runtime boundary.
+
+Repository-local stricter trust-boundary rules remain authoritative throughout migration.
 
 ## GITHUB-ONLY / LIVE-ALL v1
 

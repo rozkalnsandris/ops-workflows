@@ -157,6 +157,31 @@ class QueueGuardsTests(unittest.TestCase):
         with self.assertRaisesRegex(GuardError, "does not match manifest"):
             self.validate_manifest(manifest, pin="b" * 40)
 
+    def test_every_reusable_guard_pin_must_match_manifest_sha(self) -> None:
+        manifest = self.manifest()
+        temp = self.caller_root(manifest)
+        self.addCleanup(temp.cleanup)
+        root = Path(temp.name)
+        (root / ".github/workflows/queue-guard-second.yml").write_text(
+            "name: second queue guard\n"
+            "on: [pull_request]\n"
+            "jobs:\n"
+            "  guard:\n"
+            "    uses: rozkalnsandris/ops-workflows/.github/workflows/"
+            f"auto-run-full-queue-adoption-guard.yml@{'b' * 40}\n"
+            "    with:\n"
+            f"      canonical_policy_sha: {manifest['shared_contract_sha']}\n",
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(GuardError, "does not match manifest"):
+            MODULE.validate_adoption(
+                canonical_root=ROOT,
+                manifest_path=root / ".github/auto-run-full-queue-adoption-v1.json",
+                expected_repository=self.repository,
+                expected_sha=self.sha,
+                caller_root=root,
+            )
+
     def test_unknown_manifest_field_is_rejected(self) -> None:
         manifest = self.manifest()
         manifest["extra"] = True

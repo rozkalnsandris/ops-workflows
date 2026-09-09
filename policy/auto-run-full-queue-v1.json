@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "policy": "AUTO-RUN FULL Queue v1 shared source-policy design",
+  "canonical_repository": "rozkalnsandris/ops-workflows",
+  "tracking_issue": 39,
+  "status": "A1_SHARED_SOURCE_POLICY_DESIGN_NOT_ACTIVE",
+  "source_policy_only": true,
+  "activation": {
+    "command_active": false,
+    "consumer_auto_migration": false,
+    "explicit_per_consumer_adoption_required": true,
+    "consumer_reference_must_pin_immutable_commit_sha": true,
+    "legacy_auto_run_full_remains_authoritative_until_adoption": true
+  },
+  "queue": {
+    "minimum_items": 1,
+    "maximum_items": 10,
+    "ordered_explicit_issue_set_required": true,
+    "all_open_issues_semantics": false,
+    "future_issue_auto_inclusion": false,
+    "maximum_active_items_per_repository_controller": 1,
+    "github_is_canonical_state": true,
+    "actions_queue_is_canonical_issue_order": false,
+    "deterministic_next_item_transition_required": true,
+    "skip_failed_or_ambiguous_item": false
+  },
+  "work_item": {
+    "separate_github_issue_required": true,
+    "separate_branch_and_canonical_pr": true,
+    "exact_head_validation_required": true,
+    "ci_review_evidence_required": true,
+    "exact_main_post_merge_verification_required": true
+  },
+  "authorization": {
+    "a1_grants_queue_wide_source_authority": false,
+    "a1_grants_queue_wide_merge_authority": false,
+    "future_batch_source_and_merge_authority_requires_explicit_reviewed_contract": true,
+    "queue_authorizes_live": false,
+    "controller_state_is_authority": false,
+    "chat_history_is_authority": false,
+    "later_issue_edits_expand_frozen_scope": false
+  },
+  "resume": {
+    "preferred": "GITHUB_EVENT_TRIGGERED_WORK_WHEN_CONFIGURED",
+    "scheduled_watchdog_role": "FALLBACK_ONLY",
+    "manual_continuation_creates_new_authority": false,
+    "session_end_is_owner_gate": false
+  },
+  "final_source_reconciliation": {
+    "exact_main_required": true,
+    "exact_sha_ci_required": true,
+    "read_only_preflight_before_live_question": true,
+    "no_live_change_result": "DONE_WITHOUT_LIVE_GATE",
+    "live_change_result": "PAUSED_OWNER_LIVE_GATE"
+  },
+  "simple_live": {
+    "owner_decision_count_target": 1,
+    "fixed_reviewed_operation_identity_required": true,
+    "bind_exact_git_sha": true,
+    "bind_exact_target": true,
+    "bind_expected_baseline_when_practical": true,
+    "explicit_exclusions_required": true,
+    "dynamic_arbitrary_operation_graph": false,
+    "preflight_before_first_mutation": true,
+    "stable_target_concurrency_key_required": true,
+    "max_mutation_capable_rollouts_per_target": 1,
+    "pinned_reviewed_tooling_required": true,
+    "build_once_deploy_exact_verified_artifact_when_supported": true,
+    "cloudflare_default_gradual_deployment_required": false
+  },
+  "failure": {
+    "authorization_consumed_at_first_mutation": true,
+    "post_mutation_behavior": "PRESERVE_EVIDENCE_AND_STOP",
+    "automatic_retry": false,
+    "automatic_rollback": false,
+    "automatic_cleanup": false,
+    "alternate_mutation_path": false,
+    "fail_closed_on_scope_rule_target_sha_baseline_or_risk_drift": true
+  },
+  "execution_boundary": {
+    "ops_workflows_executes_production": false,
+    "ops_workflows_stores_production_credentials": false,
+    "ops_workflows_is_generic_remote_shell": false,
+    "ops_workflows_owns_rpi5_privileged_helpers": false,
+    "ops_workflows_owns_consumer_database_apply": false,
+    "consumer_owns_fixed_rollout_adapter": true,
+    "consumer_owns_target_credentials": true,
+    "rpi5_main_remains_trusted_host_runtime_boundary": true
+  },
+  "compatibility": {
+    "fast_lane_v2_2_preserved": true,
+    "github_only_live_all_artifacts_preserved": true,
+    "auto_live_v1_must_be_reconciled_intentionally": true,
+    "shared_policy_merge_changes_consumer_behavior": false,
+    "repository_local_stricter_rules_win": true
+  },
+  "a1_forbids": [
+    "QUEUE_EXECUTOR_ACTIVATION",
+    "CONSUMER_AUTO_MIGRATION",
+    "QUEUE_WIDE_SOURCE_OR_MERGE_AUTHORITY",
+    "PRODUCTION_OR_LIVE_MUTATION",
+    "SECRET_OR_CREDENTIAL_CHANGE",
+    "DATABASE_APPLY",
+    "CLOUDFLARE_MUTATION",
+    "RPI5_HOST_RUNTIME_MUTATION",
+    "LEGACY_AUTO_RUN_FULL_DEPRECATION"
+  ]
+}

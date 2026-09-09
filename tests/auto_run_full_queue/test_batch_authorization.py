@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
 import unittest
 import uuid
 from pathlib import Path
@@ -12,6 +13,7 @@ SCRIPT = ROOT / "scripts" / "validate_auto_run_full_queue_authorization.py"
 spec = importlib.util.spec_from_file_location("queue_auth", SCRIPT)
 mod = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
+sys.modules[spec.name] = mod
 spec.loader.exec_module(mod)
 
 

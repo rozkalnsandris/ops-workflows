@@ -1,0 +1,97 @@
+name: AUTO-RUN FULL Queue adoption guard
+
+on:
+  workflow_call:
+    inputs:
+      canonical_policy_sha:
+        description: Exact immutable ops-workflows commit containing the accepted Queue/Simple LIVE contract and this guard
+        required: true
+        type: string
+      manifest_path:
+        description: Caller-repository Queue adoption manifest
+        required: false
+        type: string
+        default: .github/auto-run-full-queue-adoption-v1.json
+
+permissions:
+  contents: read
+
+jobs:
+  adoption-guard:
+    name: Queue adoption policy guard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out caller repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Check out exact canonical shared policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: rozkalnsandris/ops-workflows
+          ref: ${{ inputs.canonical_policy_sha }}
+          path: .ops-policy
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify immutable canonical checkout and caller references
+        shell: bash
+        env:
+          CANONICAL_POLICY_SHA: ${{ inputs.canonical_policy_sha }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from __future__ import annotations
+
+          import os
+          import re
+          import subprocess
+          from pathlib import Path
+
+          expected = os.environ['CANONICAL_POLICY_SHA']
+          if not re.fullmatch(r'[0-9a-f]{40}', expected):
+              raise SystemExit('queue adoption guard: canonical_policy_sha must be exact lowercase 40-hex')
+
+          observed = subprocess.check_output(
+              ['git', '-C', '.ops-policy', 'rev-parse', 'HEAD'], text=True
+          ).strip()
+          if observed != expected:
+              raise SystemExit('queue adoption guard: canonical checkout SHA mismatch')
+
+          pattern = re.compile(
+              r'uses:\s*rozkalnsandris/ops-workflows/\.github/workflows/'
+              r'auto-run-full-queue-adoption-guard\.yml@([^\s#]+)'
+          )
+          refs = []
+          for path in sorted(list(Path('.github/workflows').glob('*.yml')) + list(Path('.github/workflows').glob('*.yaml'))):
+              for match in pattern.finditer(path.read_text(encoding='utf-8')):
+                  refs.append((path.as_posix(), match.group(1)))
+
+          if not refs:
+              raise SystemExit('queue adoption guard: caller contains no adoption-guard reference')
+          bad = [(path, ref) for path, ref in refs if ref != expected]
+          if bad:
+              detail = ', '.join(f'{path}@{ref}' for path, ref in bad)
+              raise SystemExit(f'queue adoption guard: every guard reference must equal manifest/canonical SHA: {detail}')
+
+          print(f'CALLER_GUARD_REFERENCES={len(refs)}')
+          print(f'CANONICAL_POLICY_SHA={expected}')
+          PY
+
+      - name: Validate shared composition and caller adoption manifest
+        shell: bash
+        env:
+          CANONICAL_POLICY_SHA: ${{ inputs.canonical_policy_sha }}
+          MANIFEST_PATH: ${{ inputs.manifest_path }}
+          EXPECTED_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python3 .ops-policy/scripts/validate_auto_run_full_queue_guards.py \
+            --canonical-root .ops-policy \
+            --manifest "$MANIFEST_PATH" \
+            --expected-repository "$EXPECTED_REPOSITORY" \
+            --expected-sha "$CANONICAL_POLICY_SHA" \
+            --caller-root .

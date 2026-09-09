@@ -1,0 +1,160 @@
+name: Simple LIVE policy contract
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: simple-live-policy-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Run Simple LIVE tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest -v tests.simple_live.test_simple_live_contract
+
+      - name: Validate A5 authority boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          required = [
+              Path('docs/SIMPLE_LIVE_V1.md'),
+              Path('policy/simple-live-v1.json'),
+              Path('policy/schemas/simple-live-ready-v1.schema.json'),
+              Path('scripts/validate_simple_live_ready.py'),
+              Path('tests/simple_live/test_simple_live_contract.py'),
+          ]
+          for path in required:
+              if not path.is_file() or path.stat().st_size == 0:
+                  raise SystemExit(f'missing A5 contract file: {path}')
+
+          policy = json.loads(Path('policy/simple-live-v1.json').read_text())
+          if policy.get('status') != 'A5_SHARED_SIMPLE_LIVE_CONTRACT_NOT_ACTIVE':
+              raise SystemExit('A5 status mismatch')
+          if policy.get('source_policy_only') is not True:
+              raise SystemExit('A5 must remain source-policy-only')
+
+          activation = policy['activation']
+          for key in ('consumer_mode_active', 'shared_merge_auto_migrates_consumers', 'queue_authorizes_live', 'ready_envelope_is_authority', 'may_infer_live_from_merge_start_continue_history_or_ready_state'):
+              if activation[key] is not False:
+                  raise SystemExit(f'A5 activation boundary changed: {key}')
+          if activation['fresh_explicit_owner_live_decision_required'] is not True:
+              raise SystemExit('fresh explicit owner LIVE must remain required')
+          if activation['owner_command_form'] != 'LIVE <binding_sha256>':
+              raise SystemExit('Simple LIVE owner command changed')
+
+          entry = policy['entry_gate']
+          if entry['queue_state_required'] != 'QUEUE_SOURCE_COMPLETE':
+              raise SystemExit('Simple LIVE may only begin after Queue source completion')
+          for key in (
+              'final_exact_main_sha_required',
+              'required_exact_main_ci_must_pass',
+              'full_baseline_to_target_classification_required',
+              'all_obtainable_read_only_preflight_required',
+              'fixed_reviewed_operation_identity_required',
+              'consumer_rules_revalidation_required',
+              'shared_contract_pin_must_be_immutable_commit_sha',
+              'no_live_required_finishes_without_owner_gate',
+              'unknown_or_ambiguous_classification_blocks',
+          ):
+              if entry[key] is not True:
+                  raise SystemExit(f'A5 entry gate changed: {key}')
+
+          envelope = policy['ready_envelope']
+          for key in (
+              'canonical_json_sha256_binding_required',
+              'bind_queue_id',
+              'bind_source_repository',
+              'bind_exact_source_sha',
+              'bind_exact_target_alias',
+              'bind_fixed_operation_id',
+              'bind_operation_contract_digest',
+              'bind_consumer_rules_digest',
+              'bind_shared_contract_sha',
+              'bind_expected_baseline_when_available',
+              'bind_read_only_preflight_digest',
+              'bind_allowed_mutation_classes',
+              'bind_maximum_total_mutations',
+              'bind_explicit_exclusions',
+          ):
+              if envelope[key] is not True:
+                  raise SystemExit(f'A5 ready binding changed: {key}')
+          if envelope['dynamic_arbitrary_operation_graph'] is not False:
+              raise SystemExit('dynamic operation graph must remain forbidden')
+          if envelope['arbitrary_shell_argv_or_environment_from_live_command'] is not False:
+              raise SystemExit('arbitrary shell/argv/env authority must remain forbidden')
+
+          owner = policy['owner_decision']
+          if owner['bare_live_without_binding_digest_is_valid'] is not False:
+              raise SystemExit('bare LIVE must remain invalid')
+          if owner['revalidate_same_binding_immediately_before_first_mutation'] is not True:
+              raise SystemExit('pre-mutation binding refresh must remain required')
+          if owner['newer_main_may_replace_approved_sha'] is not False:
+              raise SystemExit('approval must not float to newer main')
+
+          execution = policy['execution']
+          if execution['ops_workflows_executes_production'] is not False or execution['ops_workflows_stores_production_credentials'] is not False:
+              raise SystemExit('ops-workflows production boundary changed')
+          for key in (
+              'consumer_owns_fixed_reviewed_rollout_adapter',
+              'one_mutation_capable_owner_per_target',
+              'stable_target_concurrency_or_equivalent_lock_required',
+              'preflight_before_first_mutation',
+              'project_pinned_or_exact_tooling_required',
+              'build_once_deploy_exact_verified_artifact_when_supported',
+              'authorization_consumed_at_first_state_changing_operation',
+              'one_final_public_safe_receipt',
+          ):
+              if execution[key] is not True:
+                  raise SystemExit(f'A5 execution invariant changed: {key}')
+          for key in ('automatic_retry', 'automatic_rollback', 'automatic_cleanup', 'alternate_mutation_path'):
+              if execution[key] is not False:
+                  raise SystemExit(f'A5 failure behavior changed: {key}')
+
+          deferred = policy['deferred_trusted_executor']
+          if deferred['rpi5_trust_boundary_preserved'] is not True:
+              raise SystemExit('RPi5 trust boundary changed')
+          if deferred['existing_live_auth_v1_required_for_deferred_rpi5_execution'] is not True:
+              raise SystemExit('deferred RPi5 must still require LIVE-AUTH v1')
+          if deferred['simple_live_replaces_live_auth_v1_author_identity_ttl_or_replay_rules'] is not False:
+              raise SystemExit('A5 must not replace LIVE-AUTH trust semantics')
+          if deferred['live_auth_materialization_may_occur_before_owner_live_decision'] is not False:
+              raise SystemExit('LIVE-AUTH may not be materialized before owner LIVE')
+          if deferred['ops_workflows_becomes_generic_remote_shell'] is not False:
+              raise SystemExit('ops-workflows must not become remote shell')
+
+          compat = policy['auto_live_compatibility']
+          if compat['auto_live_v1_is_automatically_disabled'] is not False:
+              raise SystemExit('A5 must not silently disable Auto-Live')
+          if compat['consumer_adoption_must_select_one_final_live_mode_per_operation'] is not True:
+              raise SystemExit('consumer must select one final live mode')
+          if compat['double_execution_paths_for_same_operation_allowed'] is not False:
+              raise SystemExit('double execution paths must remain forbidden')
+
+          forbidden = policy['forbidden_by_a5']
+          if not all(forbidden.values()):
+              raise SystemExit('A5 source-only forbidden mutation boundary changed')
+
+          print('SIMPLE_LIVE_A5=PASS')
+          PY

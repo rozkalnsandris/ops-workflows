@@ -10,7 +10,9 @@ from pathlib import Path
 from typing import Any
 
 SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+QUEUE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 GUARD_USES_RE = re.compile(
     r"uses:\s*rozkalnsandris/ops-workflows/\.github/workflows/"
     r"auto-run-full-queue-adoption-guard\.yml@([^\s#]+)"
@@ -126,10 +128,68 @@ def validate_composition(root: Path) -> int:
     for key, expected in expected_a6.items():
         require(composition.get(key) == expected, f"A6 composition invariant drifted: {key}")
 
-    return len(expected_a6) + 33
+    expected_adoption = {
+        "source_canary_evidence_block_required": True,
+        "live_canary_requires_queue_source_complete_evidence": True,
+        "migrated_requires_queue_source_complete_evidence": True,
+        "source_canary_evidence_is_live_authority": False,
+    }
+    adoption = nested(a6, "consumer_adoption")
+    for key, expected in expected_adoption.items():
+        require(adoption.get(key) == expected, f"A6 consumer adoption invariant drifted: {key}")
+
+    fail_closed = nested(a6, "fail_closed")
+    require(fail_closed.get("live_or_migrated_without_source_canary_evidence") is True, "A6 phase advance can bypass source-canary evidence")
+    require(fail_closed.get("malformed_source_canary_evidence") is True, "A6 malformed source-canary evidence no longer fails closed")
+
+    return len(expected_a6) + len(expected_adoption) + 35
+
+def validate_source_canary(source_canary: Any) -> None:
+    require(isinstance(source_canary, dict), "manifest source_canary must be an object")
+    require_exact_keys(
+        source_canary,
+        {
+            "status",
+            "queue_id",
+            "controller_issue_number",
+            "ordered_issue_numbers",
+            "activation_main_sha",
+            "final_main_sha",
+            "authorization_receipt_sha256",
+            "completion_receipt_sha256",
+        },
+        "manifest source_canary",
+    )
+    status = source_canary["status"]
+    require(status in {"NOT_PROVEN", "QUEUE_SOURCE_COMPLETE"}, "manifest source_canary status is invalid")
+
+    if status == "NOT_PROVEN":
+        require(source_canary["queue_id"] is None, "NOT_PROVEN source_canary queue_id must be null")
+        require(source_canary["controller_issue_number"] is None, "NOT_PROVEN source_canary controller_issue_number must be null")
+        require(source_canary["ordered_issue_numbers"] == [], "NOT_PROVEN source_canary ordered_issue_numbers must be empty")
+        require(source_canary["activation_main_sha"] is None, "NOT_PROVEN source_canary activation_main_sha must be null")
+        require(source_canary["final_main_sha"] is None, "NOT_PROVEN source_canary final_main_sha must be null")
+        require(source_canary["authorization_receipt_sha256"] is None, "NOT_PROVEN source_canary authorization_receipt_sha256 must be null")
+        require(source_canary["completion_receipt_sha256"] is None, "NOT_PROVEN source_canary completion_receipt_sha256 must be null")
+        return
+
+    queue_id = source_canary["queue_id"]
+    require(isinstance(queue_id, str) and QUEUE_ID_RE.fullmatch(queue_id) is not None, "QUEUE_SOURCE_COMPLETE source_canary queue_id is invalid")
+    controller_issue = source_canary["controller_issue_number"]
+    require(type(controller_issue) is int and controller_issue >= 1, "QUEUE_SOURCE_COMPLETE source_canary controller_issue_number must be positive")
+    issues = source_canary["ordered_issue_numbers"]
+    require(isinstance(issues, list) and 1 <= len(issues) <= 10, "QUEUE_SOURCE_COMPLETE source_canary ordered_issue_numbers must contain 1..10 issues")
+    require(all(type(issue) is int and issue >= 1 for issue in issues), "QUEUE_SOURCE_COMPLETE source_canary issue numbers must be positive integers")
+    require(len(set(issues)) == len(issues), "QUEUE_SOURCE_COMPLETE source_canary ordered_issue_numbers must be unique")
+    for field in ("activation_main_sha", "final_main_sha"):
+        value = source_canary[field]
+        require(isinstance(value, str) and SHA40_RE.fullmatch(value) is not None, f"QUEUE_SOURCE_COMPLETE source_canary {field} must be exact lowercase 40-hex")
+    for field in ("authorization_receipt_sha256", "completion_receipt_sha256"):
+        value = source_canary[field]
+        require(isinstance(value, str) and SHA256_RE.fullmatch(value) is not None, f"QUEUE_SOURCE_COMPLETE source_canary {field} must be exact lowercase SHA-256")
 
 def validate_manifest_shape(manifest: dict[str, Any]) -> None:
-    require_exact_keys(manifest, {"schema", "repository", "shared_contract_sha", "adoption_phase", "queue", "final_live", "boundaries"}, "manifest")
+    require_exact_keys(manifest, {"schema", "repository", "shared_contract_sha", "adoption_phase", "queue", "source_canary", "final_live", "boundaries"}, "manifest")
     require(manifest["schema"] == "rozkalns.auto-run-full-queue-adoption.v1", "manifest schema mismatch")
     require(isinstance(manifest["repository"], str) and REPOSITORY_RE.fullmatch(manifest["repository"]) is not None, "manifest repository is invalid")
     require(isinstance(manifest["shared_contract_sha"], str) and SHA40_RE.fullmatch(manifest["shared_contract_sha"]) is not None, "manifest shared_contract_sha must be exact lowercase 40-hex")
@@ -145,6 +205,8 @@ def validate_manifest_shape(manifest: dict[str, Any]) -> None:
     require(queue["batch_merge_authority"] is True, "manifest batch_merge_authority must be true")
     require(queue["live_authority"] is False, "manifest queue must never grant LIVE authority")
 
+    validate_source_canary(manifest["source_canary"])
+
     final_live = manifest["final_live"]
     require(isinstance(final_live, dict), "manifest final_live must be an object")
     require_exact_keys(final_live, {"mode", "double_execution_paths_allowed", "deferred_rpi5_requires_live_auth_v1"}, "manifest final_live")
@@ -153,10 +215,14 @@ def validate_manifest_shape(manifest: dict[str, Any]) -> None:
     require(final_live["deferred_rpi5_requires_live_auth_v1"] is True, "manifest must preserve deferred RPi5 LIVE-AUTH v1")
 
     phase = manifest["adoption_phase"]
+    source_status = manifest["source_canary"]["status"]
     if phase == "SOURCE_ONLY_CANARY":
         require(final_live["mode"] == "DISABLED", "SOURCE_ONLY_CANARY must keep final LIVE disabled")
     elif phase == "LIVE_CANARY_READY":
+        require(source_status == "QUEUE_SOURCE_COMPLETE", "LIVE_CANARY_READY requires QUEUE_SOURCE_COMPLETE source-canary evidence")
         require(final_live["mode"] != "DISABLED", "LIVE_CANARY_READY requires one explicit final LIVE mode")
+    elif phase == "MIGRATED":
+        require(source_status == "QUEUE_SOURCE_COMPLETE", "MIGRATED requires QUEUE_SOURCE_COMPLETE source-canary evidence")
 
     boundaries = manifest["boundaries"]
     require(isinstance(boundaries, dict), "manifest boundaries must be an object")
@@ -199,7 +265,7 @@ def validate_adoption(canonical_root: Path, manifest_path: Path, expected_reposi
     canonical_head = canonical_root / ".git"
     if canonical_head.exists():
         require(canonical_head.is_dir() or canonical_head.is_file(), "canonical checkout .git marker is invalid")
-    return 24
+    return 32
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()

@@ -10,6 +10,7 @@
     "shared_contract_sha",
     "adoption_phase",
     "queue",
+    "source_canary",
     "final_live",
     "boundaries"
   ],
@@ -52,6 +53,120 @@
         "live_authority": {"const": false}
       }
     },
+    "source_canary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "queue_id",
+        "controller_issue_number",
+        "ordered_issue_numbers",
+        "activation_main_sha",
+        "final_main_sha",
+        "authorization_receipt_sha256",
+        "completion_receipt_sha256"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "NOT_PROVEN",
+            "QUEUE_SOURCE_COMPLETE"
+          ]
+        },
+        "queue_id": {
+          "type": ["string", "null"],
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "controller_issue_number": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "ordered_issue_numbers": {
+          "type": "array",
+          "items": {"type": "integer", "minimum": 1},
+          "maxItems": 10,
+          "uniqueItems": true
+        },
+        "activation_main_sha": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "final_main_sha": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "authorization_receipt_sha256": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "completion_receipt_sha256": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {"const": "NOT_PROVEN"}
+            }
+          },
+          "then": {
+            "properties": {
+              "queue_id": {"const": null},
+              "controller_issue_number": {"const": null},
+              "ordered_issue_numbers": {"maxItems": 0},
+              "activation_main_sha": {"const": null},
+              "final_main_sha": {"const": null},
+              "authorization_receipt_sha256": {"const": null},
+              "completion_receipt_sha256": {"const": null}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {"const": "QUEUE_SOURCE_COMPLETE"}
+            }
+          },
+          "then": {
+            "properties": {
+              "queue_id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+              },
+              "controller_issue_number": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "ordered_issue_numbers": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 10,
+                "uniqueItems": true,
+                "items": {"type": "integer", "minimum": 1}
+              },
+              "activation_main_sha": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$"
+              },
+              "final_main_sha": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$"
+              },
+              "authorization_receipt_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "completion_receipt_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            }
+          }
+        }
+      ]
+    },
     "final_live": {
       "type": "object",
       "additionalProperties": false,
@@ -88,5 +203,65 @@
         "repository_local_stricter_rules_win": {"const": true}
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "adoption_phase": {"const": "SOURCE_ONLY_CANARY"}
+        }
+      },
+      "then": {
+        "properties": {
+          "final_live": {
+            "properties": {
+              "mode": {"const": "DISABLED"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "adoption_phase": {"const": "LIVE_CANARY_READY"}
+        }
+      },
+      "then": {
+        "properties": {
+          "source_canary": {
+            "properties": {
+              "status": {"const": "QUEUE_SOURCE_COMPLETE"}
+            }
+          },
+          "final_live": {
+            "properties": {
+              "mode": {
+                "enum": [
+                  "SIMPLE_LIVE_OWNER_DRIVEN",
+                  "AUTO_LIVE_V1_STATIC"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "adoption_phase": {"const": "MIGRATED"}
+        }
+      },
+      "then": {
+        "properties": {
+          "source_canary": {
+            "properties": {
+              "status": {"const": "QUEUE_SOURCE_COMPLETE"}
+            }
+          }
+        }
+      }
+    }
+  ]
 }

@@ -1,6 +1,6 @@
 # AUTO-RUN FULL Queue reusable guards v1 — A6
 
-**Status:** shared source-policy / CI guard design, not active in any consumer.  
+**Status:** shared source-policy / read-only CI guard contract; consumer activation remains explicit.  
 **Tracking:** `ops-workflows#39`.  
 **Production execution:** none.
 
@@ -23,6 +23,8 @@ The composition guard requires at least these properties:
 - Queue authority never includes LIVE;
 - event/watchdog/manual wake signals never become authority and never advance the cursor directly;
 - a Simple LIVE Ready envelope is evidence, not authority;
+- `LIVE_CANARY_READY` and `MIGRATED` require an explicit source-canary completion evidence block rather than a phase label alone;
+- source-canary evidence is historical proof, never LIVE authority;
 - owner LIVE is separately explicit when Simple LIVE is selected;
 - merge never authorizes LIVE;
 - `ops-workflows` never executes production and never stores production credentials;
@@ -41,7 +43,7 @@ Schema:
 
 `policy/schemas/auto-run-full-queue-adoption-v1.schema.json`
 
-The manifest is intentionally small. It records only the migration phase and the shared trust-boundary assertions needed to prove that the consumer is adopting the same Queue semantics. It is not a deployment operation registry and must not contain credentials or protected runtime data.
+The manifest is intentionally bounded. It records the migration phase, the public-safe source-canary proof needed for later phases, and the shared trust-boundary assertions needed to prove that the consumer is adopting the same Queue semantics. It is not a deployment operation registry and must not contain credentials or protected runtime data.
 
 ### Required identity binding
 
@@ -51,6 +53,7 @@ The manifest binds:
 - exact immutable 40-character lowercase `ops-workflows` commit SHA;
 - one adoption phase;
 - Queue authority limits;
+- source-canary proof state;
 - one final-live mode;
 - shared/consumer execution boundaries.
 
@@ -59,6 +62,33 @@ The consumer CI workflow must call:
 `rozkalnsandris/ops-workflows/.github/workflows/auto-run-full-queue-adoption-guard.yml@<exact-40-char-sha>`
 
 Every caller workflow reference to this guard must use the same exact SHA recorded by the manifest. Mutable `main`, tags or version branches are rejected.
+
+### Source-canary evidence gate
+
+The manifest contains one exact `source_canary` object. Its status is either:
+
+- `NOT_PROVEN`; or
+- `QUEUE_SOURCE_COMPLETE`.
+
+`NOT_PROVEN` is deliberately empty: Queue ID, controller issue, ordered issue list, main SHAs and receipt digests must all be null/empty. This prevents a partial or implied canary from being mistaken for completion.
+
+`QUEUE_SOURCE_COMPLETE` is a reviewed source attestation and must bind all of:
+
+- one bounded public-safe Queue ID;
+- the durable Queue controller issue number;
+- the exact ordered 1-10 issue set that was exercised;
+- exact activation-main SHA;
+- exact final-main SHA after Queue source completion;
+- SHA-256 of the durable Queue authorization receipt;
+- SHA-256 of the final Queue source-completion receipt.
+
+Issue numbers must be positive and unique. SHAs and receipt hashes must be lowercase exact-length values. The evidence block contains no secrets or runtime credentials.
+
+A source-only consumer may record `QUEUE_SOURCE_COMPLETE` while final LIVE remains disabled. However `LIVE_CANARY_READY` and `MIGRATED` **must** carry `QUEUE_SOURCE_COMPLETE`; a phase label without this evidence fails closed.
+
+The checked-in evidence block does not create Queue or LIVE authority and does not replace the underlying durable GitHub receipts. It is the source-policy binding that prevents a consumer from claiming later migration phases merely because adoption plumbing was merged.
+
+Consumers pinned to an older immutable shared SHA are unaffected until they explicitly repin. A consumer repinning to a shared revision containing this guard must add the `source_canary` block and satisfy the phase/evidence rules in the same reviewed source change.
 
 ## Adoption phases
 
@@ -77,9 +107,11 @@ Required behavior:
 
 The source-only canary proves Queue ordering, scope freeze, one-ACTIVE behavior, PR/CI/review convergence, exact-head merge and exact-main advancement without exercising the new Simple LIVE path.
 
+Merging Queue adoption plumbing alone does not prove that canary. Until an actual Queue source run has completed, the manifest remains `source_canary.status=NOT_PROVEN`. After a genuine Queue run reaches source completion, the consumer may record `QUEUE_SOURCE_COMPLETE` while still in this phase before a separately reviewed phase advance.
+
 ### `LIVE_CANARY_READY`
 
-This phase is only for a consumer that has already passed source-only Queue canary acceptance and is preparing the separately gated A8 LIVE canary.
+This phase is only for a consumer that has already passed source-only Queue canary acceptance and has `source_canary.status=QUEUE_SOURCE_COMPLETE`.
 
 Exactly one final-live mode must be selected:
 
@@ -92,7 +124,9 @@ Selecting a mode in source does not itself authorize a live mutation. Simple LIV
 
 ### `MIGRATED`
 
-The repository has completed the applicable Queue canary and any required LIVE acceptance. A source-only/non-production consumer may remain with final-live mode `DISABLED`; a production-bearing operation selects exactly one reviewed final-live mode.
+The repository has completed the applicable Queue source canary and therefore must also carry `source_canary.status=QUEUE_SOURCE_COMPLETE`. Any required LIVE acceptance remains governed by the selected consumer path and repository-local rules.
+
+A source-only/non-production consumer may remain with final-live mode `DISABLED`; a production-bearing operation selects exactly one reviewed final-live mode.
 
 Migration status never weakens repository-local stricter rules.
 
@@ -114,6 +148,7 @@ Properties:
 - observed canonical checkout HEAD must equal that SHA;
 - caller repository identity must equal the manifest repository;
 - every caller reference to the reusable guard must equal the manifest SHA;
+- adoption phase and source-canary evidence must be internally consistent;
 - no secret inheritance is required;
 - no write permission or mutation step exists.
 
@@ -154,6 +189,9 @@ The guard fails closed on at least:
 - more than ten queued items declared by the consumer contract;
 - more than one ACTIVE item allowed;
 - Queue LIVE authority enabled;
+- malformed or partially populated source-canary evidence;
+- `LIVE_CANARY_READY` without `QUEUE_SOURCE_COMPLETE` evidence;
+- `MIGRATED` without `QUEUE_SOURCE_COMPLETE` evidence;
 - source-only canary with final LIVE enabled;
 - LIVE canary without one explicit final-live mode;
 - double final-live path allowed;
@@ -168,11 +206,13 @@ A CI guard failure is source evidence only. It does not authorize retrying a pro
 After A6 is merged and exact-main CI is green, A7 may select one canary consumer and create a normal source PR that:
 
 1. pins the accepted A6 `ops-workflows` commit SHA;
-2. adds the repository-local adoption manifest with phase `SOURCE_ONLY_CANARY`;
+2. adds the repository-local adoption manifest with phase `SOURCE_ONLY_CANARY` and `source_canary.status=NOT_PROVEN`;
 3. calls the reusable adoption guard at the same exact SHA;
 4. preserves final LIVE as disabled for the Queue canary;
 5. adds only the consumer-local controller/routing changes required to exercise Queue source behavior;
 6. reaches Ready under that consumer's normal source rules;
 7. does not perform LIVE/runtime/credential/repository-settings mutation as part of the adoption PR.
+
+A7 adoption is readiness to exercise the source-only Queue canary, not proof that the canary already ran. Only a genuine Queue execution that reaches source completion may populate `QUEUE_SOURCE_COMPLETE`; only after that proof exists may a later source change advance to `LIVE_CANARY_READY`.
 
 A7 is a new repository-specific migration action and must freshly read that consumer's rules before any write.

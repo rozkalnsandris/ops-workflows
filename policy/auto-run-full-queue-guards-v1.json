@@ -42,6 +42,10 @@
       "LIVE_CANARY_READY",
       "MIGRATED"
     ],
+    "source_canary_evidence_block_required": true,
+    "live_canary_requires_queue_source_complete_evidence": true,
+    "migrated_requires_queue_source_complete_evidence": true,
+    "source_canary_evidence_is_live_authority": false,
     "source_only_canary_final_live_mode": "DISABLED",
     "allowed_final_live_modes_after_source_canary": [
       "SIMPLE_LIVE_OWNER_DRIVEN",
@@ -69,6 +73,8 @@
     "queue_live_authority_true": true,
     "more_than_one_active_item": true,
     "source_canary_with_live_enabled": true,
+    "live_or_migrated_without_source_canary_evidence": true,
+    "malformed_source_canary_evidence": true,
     "double_final_live_path": true,
     "rpi5_live_auth_bypass": true,
     "shared_contract_composition_drift": true,

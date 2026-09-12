@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import importlib.util
 import json
 import shutil
@@ -25,7 +24,37 @@ class QueueGuardsTests(unittest.TestCase):
     sha = "a" * 40
     repository = "rozkalnsandris/example-consumer"
 
-    def manifest(self, phase: str = "SOURCE_ONLY_CANARY", live_mode: str = "DISABLED") -> dict:
+    def source_canary(self, proven: bool = False) -> dict:
+        if not proven:
+            return {
+                "status": "NOT_PROVEN",
+                "queue_id": None,
+                "controller_issue_number": None,
+                "ordered_issue_numbers": [],
+                "activation_main_sha": None,
+                "final_main_sha": None,
+                "authorization_receipt_sha256": None,
+                "completion_receipt_sha256": None,
+            }
+        return {
+            "status": "QUEUE_SOURCE_COMPLETE",
+            "queue_id": "queue-canary-2026-09",
+            "controller_issue_number": 321,
+            "ordered_issue_numbers": [123],
+            "activation_main_sha": "b" * 40,
+            "final_main_sha": "c" * 40,
+            "authorization_receipt_sha256": "d" * 64,
+            "completion_receipt_sha256": "e" * 64,
+        }
+
+    def manifest(
+        self,
+        phase: str = "SOURCE_ONLY_CANARY",
+        live_mode: str = "DISABLED",
+        source_proven: bool | None = None,
+    ) -> dict:
+        if source_proven is None:
+            source_proven = phase in {"LIVE_CANARY_READY", "MIGRATED"}
         return {
             "schema": "rozkalns.auto-run-full-queue-adoption.v1",
             "repository": self.repository,
@@ -39,6 +68,7 @@ class QueueGuardsTests(unittest.TestCase):
                 "batch_merge_authority": True,
                 "live_authority": False,
             },
+            "source_canary": self.source_canary(source_proven),
             "final_live": {
                 "mode": live_mode,
                 "double_execution_paths_allowed": False,
@@ -87,16 +117,63 @@ class QueueGuardsTests(unittest.TestCase):
 
     def test_shared_composition_passes(self) -> None:
         checks = MODULE.validate_composition(ROOT)
-        self.assertGreaterEqual(checks, 40)
+        self.assertGreaterEqual(checks, 50)
 
-    def test_source_only_canary_manifest_passes(self) -> None:
+    def test_source_only_canary_manifest_passes_without_proof(self) -> None:
         self.validate_manifest(self.manifest())
 
-    def test_live_canary_simple_live_manifest_passes(self) -> None:
-        self.validate_manifest(self.manifest("LIVE_CANARY_READY", "SIMPLE_LIVE_OWNER_DRIVEN"))
+    def test_source_only_canary_may_record_completed_proof_while_live_disabled(self) -> None:
+        self.validate_manifest(self.manifest(source_proven=True))
 
-    def test_live_canary_auto_live_manifest_passes(self) -> None:
-        self.validate_manifest(self.manifest("LIVE_CANARY_READY", "AUTO_LIVE_V1_STATIC"))
+    def test_live_canary_simple_live_manifest_passes_with_source_proof(self) -> None:
+        self.validate_manifest(
+            self.manifest("LIVE_CANARY_READY", "SIMPLE_LIVE_OWNER_DRIVEN")
+        )
+
+    def test_live_canary_auto_live_manifest_passes_with_source_proof(self) -> None:
+        self.validate_manifest(
+            self.manifest("LIVE_CANARY_READY", "AUTO_LIVE_V1_STATIC")
+        )
+
+    def test_live_canary_without_source_proof_is_rejected(self) -> None:
+        manifest = self.manifest(
+            "LIVE_CANARY_READY",
+            "SIMPLE_LIVE_OWNER_DRIVEN",
+            source_proven=False,
+        )
+        with self.assertRaisesRegex(
+            GuardError, "requires QUEUE_SOURCE_COMPLETE source-canary evidence"
+        ):
+            self.validate_manifest(manifest)
+
+    def test_migrated_without_source_proof_is_rejected(self) -> None:
+        manifest = self.manifest("MIGRATED", "DISABLED", source_proven=False)
+        with self.assertRaisesRegex(
+            GuardError, "MIGRATED requires QUEUE_SOURCE_COMPLETE"
+        ):
+            self.validate_manifest(manifest)
+
+    def test_completed_source_canary_requires_unique_ordered_issues(self) -> None:
+        manifest = self.manifest(
+            "LIVE_CANARY_READY", "SIMPLE_LIVE_OWNER_DRIVEN"
+        )
+        manifest["source_canary"]["ordered_issue_numbers"] = [123, 123]
+        with self.assertRaisesRegex(GuardError, "must be unique"):
+            self.validate_manifest(manifest)
+
+    def test_completed_source_canary_requires_receipt_hashes(self) -> None:
+        manifest = self.manifest(
+            "LIVE_CANARY_READY", "SIMPLE_LIVE_OWNER_DRIVEN"
+        )
+        manifest["source_canary"]["completion_receipt_sha256"] = "not-a-hash"
+        with self.assertRaisesRegex(GuardError, "exact lowercase SHA-256"):
+            self.validate_manifest(manifest)
+
+    def test_not_proven_source_canary_cannot_smuggle_evidence(self) -> None:
+        manifest = self.manifest()
+        manifest["source_canary"]["queue_id"] = "phantom-queue"
+        with self.assertRaisesRegex(GuardError, "queue_id must be null"):
+            self.validate_manifest(manifest)
 
     def test_source_only_canary_cannot_enable_live(self) -> None:
         manifest = self.manifest("SOURCE_ONLY_CANARY", "SIMPLE_LIVE_OWNER_DRIVEN")
@@ -219,6 +296,21 @@ class QueueGuardsTests(unittest.TestCase):
             policy["merge"]["authorizes_live_mutation"] = True
             path.write_text(json.dumps(policy), encoding="utf-8")
             with self.assertRaisesRegex(GuardError, "Auto-Live merge gained LIVE authority"):
+                MODULE.validate_composition(root)
+
+    def test_composition_rejects_phase_advance_without_evidence_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            shutil.copytree(ROOT / "policy", root / "policy")
+            path = root / "policy/auto-run-full-queue-guards-v1.json"
+            policy = json.loads(path.read_text(encoding="utf-8"))
+            policy["consumer_adoption"][
+                "live_canary_requires_queue_source_complete_evidence"
+            ] = False
+            path.write_text(json.dumps(policy), encoding="utf-8")
+            with self.assertRaisesRegex(
+                GuardError, "consumer adoption invariant drifted"
+            ):
                 MODULE.validate_composition(root)
 
 

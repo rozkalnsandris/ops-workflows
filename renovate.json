@@ -1,0 +1,46 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "enabledManagers": [
+    "github-actions"
+  ],
+  "dependencyDashboard": true,
+  "automerge": false,
+  "platformAutomerge": false,
+  "configMigration": false,
+  "branchConcurrentLimit": 2,
+  "prConcurrentLimit": 2,
+  "prHourlyLimit": 1,
+  "commitHourlyLimit": 2,
+  "rebaseWhen": "conflicted",
+  "packageRules": [
+    {
+      "description": "Group non-major GitHub Actions updates without granting merge authority",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "digest",
+        "patch",
+        "minor"
+      ],
+      "groupName": "GitHub Actions non-major updates",
+      "groupSlug": "github-actions-non-major",
+      "automerge": false
+    },
+    {
+      "description": "Require Dependency Dashboard approval before major GitHub Actions PRs",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "dependencyDashboardApproval": true,
+      "automerge": false
+    }
+  ]
+}

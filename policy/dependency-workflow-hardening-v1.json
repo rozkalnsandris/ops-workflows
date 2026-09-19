@@ -11,6 +11,7 @@
     "automerge": false,
     "platform_automerge": false,
     "dependency_dashboard": true,
+    "vulnerability_alerts": false,
     "branch_concurrent_limit": 2,
     "pr_concurrent_limit": 2,
     "pr_hourly_limit": 1,
@@ -31,6 +32,7 @@
     "zizmor": {
       "action_sha": "3dc1ecc9bcb9e94e9b2c709687979e1298497054",
       "action_version": "v0.6.2",
+      "engine_version": "1.29.0",
       "online_audits": false,
       "advanced_security": false,
       "annotations": true,

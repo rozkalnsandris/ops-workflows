@@ -23,7 +23,7 @@ jobs:
   source-contract:
     if: github.event_name != 'issues'
     name: LIVE-AUTH source contract
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - name: Checkout exact source
@@ -41,7 +41,7 @@ jobs:
   issue-lint:
     if: github.event_name == 'issues' && startsWith(github.event.issue.title, '[LIVE-AUTH]')
     name: LIVE-AUTH issue lint (read-only)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions:
       contents: read

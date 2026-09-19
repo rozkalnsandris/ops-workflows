@@ -19,7 +19,7 @@ permissions:
 jobs:
   policy-drift:
     name: FAST-LANE v2.2 policy drift
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - name: Check out caller repository

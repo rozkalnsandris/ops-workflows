@@ -19,7 +19,7 @@ permissions:
 jobs:
   adoption-guard:
     name: Queue adoption policy guard
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - name: Check out caller repository

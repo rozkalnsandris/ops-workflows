@@ -17,7 +17,7 @@ concurrency:
 jobs:
   policy-merge-gate:
     name: Policy Merge Gate
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - name: Checkout exact source

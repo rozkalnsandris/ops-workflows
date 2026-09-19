@@ -74,6 +74,12 @@ class DependencyWorkflowHardeningTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "zizmor action Renovate updates"):
             validate_renovate(config, self.policy)
 
+    def test_rejects_partial_zizmor_engine_renovate_updates(self) -> None:
+        config = copy.deepcopy(self.renovate)
+        config["packageRules"][4]["enabled"] = True
+        with self.assertRaisesRegex(ValueError, "zizmor engine Renovate updates"):
+            validate_renovate(config, self.policy)
+
     def test_rejects_vulnerability_alert_scope_expansion(self) -> None:
         config = copy.deepcopy(self.renovate)
         config["vulnerabilityAlerts"]["enabled"] = True
@@ -97,7 +103,16 @@ class DependencyWorkflowHardeningTests(unittest.TestCase):
 
     def test_rejects_missing_zizmor_companion_documentation(self) -> None:
         doc = (ROOT / "docs" / "DEPENDENCY_WORKFLOW_HARDENING_V1.md").read_text(encoding="utf-8")
-        doc = doc.replace("Renovate does not update this action independently", "Renovate may update this action independently")
+        doc = doc.replace(
+            "Renovate does not update this action or its `ghcr.io/zizmorcore/zizmor` `uses-with` engine input independently",
+            "Renovate may update this action independently",
+        )
+        with self.assertRaisesRegex(ValueError, "documentation missing governance marker"):
+            validate_documentation(doc)
+
+    def test_rejects_missing_major_reconciliation_boundary_documentation(self) -> None:
+        doc = (ROOT / "docs" / "DEPENDENCY_WORKFLOW_HARDENING_V1.md").read_text(encoding="utf-8")
+        doc = doc.replace("Dependency Dashboard approval is a creation gate.", "Dependency Dashboard approval is retroactive.")
         with self.assertRaisesRegex(ValueError, "documentation missing governance marker"):
             validate_documentation(doc)
 

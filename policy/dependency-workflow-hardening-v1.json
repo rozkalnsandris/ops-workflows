@@ -30,7 +30,10 @@
     "github_runner_updates_enabled": false,
     "github_runner_dep_type": "github-runner",
     "zizmor_action_renovate_updates_enabled": false,
-    "zizmor_action_package": "zizmorcore/zizmor-action"
+    "zizmor_action_package": "zizmorcore/zizmor-action",
+    "zizmor_engine_renovate_updates_enabled": false,
+    "zizmor_engine_package": "ghcr.io/zizmorcore/zizmor",
+    "zizmor_engine_dep_type": "uses-with"
   },
   "workflow_static_analysis": {
     "reusable_workflow": ".github/workflows/workflow-security.yml",

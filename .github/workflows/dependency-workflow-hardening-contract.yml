@@ -1,0 +1,50 @@
+name: Dependency and workflow hardening
+
+on:
+  pull_request:
+    paths:
+      - 'renovate.json'
+      - 'policy/dependency-workflow-hardening-v1.json'
+      - 'docs/DEPENDENCY_WORKFLOW_HARDENING_V1.md'
+      - 'scripts/validate_dependency_workflow_hardening.py'
+      - 'tests/dependency_workflow_hardening/**'
+      - '.github/workflows/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'renovate.json'
+      - 'policy/dependency-workflow-hardening-v1.json'
+      - 'docs/DEPENDENCY_WORKFLOW_HARDENING_V1.md'
+      - 'scripts/validate_dependency_workflow_hardening.py'
+      - 'tests/dependency_workflow_hardening/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-workflow-hardening-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  contract:
+    name: Dependency/workflow hardening contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate hardening policy
+        run: python3 scripts/validate_dependency_workflow_hardening.py .
+
+      - name: Run hardening regression tests
+        run: python3 -m unittest discover -s tests/dependency_workflow_hardening -p 'test_*.py' -v
+
+  workflow-security:
+    uses: ./.github/workflows/workflow-security.yml

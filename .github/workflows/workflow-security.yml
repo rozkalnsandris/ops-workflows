@@ -61,6 +61,7 @@ jobs:
           persona: "regular"
           min-severity: "medium"
           min-confidence: "medium"
+          version: "1.29.0"
           advanced-security: "false"
           annotations: "true"
           color: "true"

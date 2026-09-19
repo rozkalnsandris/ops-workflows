@@ -29,6 +29,11 @@ def validate_renovate(config: dict, policy: dict) -> None:
     require(config.get("automerge") is expected["automerge"], "Renovate automerge must stay disabled")
     require(config.get("platformAutomerge") is expected["platform_automerge"], "platform automerge must stay disabled")
     require(config.get("dependencyDashboard") is expected["dependency_dashboard"], "Dependency Dashboard invariant changed")
+    require(
+        config.get("dependencyDashboardApproval") is expected["dependency_dashboard_approval_default"],
+        "Dependency Dashboard approval must be the fail-closed default",
+    )
+    require(config.get("prCreation") == expected["pr_creation"], "Renovate PR creation mode drift")
     require(config.get("branchConcurrentLimit") == expected["branch_concurrent_limit"], "Renovate branch concurrency changed")
     require(config.get("prConcurrentLimit") == expected["pr_concurrent_limit"], "Renovate PR concurrency changed")
     require(config.get("prHourlyLimit") == expected["pr_hourly_limit"], "Renovate PR hourly limit changed")
@@ -47,14 +52,51 @@ def validate_renovate(config: dict, policy: dict) -> None:
 
     package_rules = config.get("packageRules")
     require(isinstance(package_rules, list) and package_rules, "Renovate package rules missing")
-    major_gate = False
+    require(len(package_rules) == 4, "unexpected Renovate package rule requires policy review")
+    major_rules: list[dict] = []
+    dashboard_bypass_rules: list[dict] = []
+    runner_hold_rules: list[dict] = []
+    zizmor_hold_rules: list[dict] = []
     for rule in package_rules:
         require(isinstance(rule, dict), "Renovate package rule must be an object")
+        require(rule.get("matchManagers") == expected["enabled_managers"], "package rule manager scope drift")
         require(rule.get("automerge") is not True, "package rule may not enable automerge")
-        if "major" in rule.get("matchUpdateTypes", []):
+        update_types = rule.get("matchUpdateTypes", [])
+        require(isinstance(update_types, list), "package rule update types must be a list")
+        if any(update_type in expected["major_update_types"] for update_type in update_types):
             require(rule.get("dependencyDashboardApproval") is True, "major Action updates require Dashboard approval")
-            major_gate = True
-    require(major_gate == expected["major_updates_require_dashboard_approval"], "major-update approval invariant changed")
+            require(rule.get("enabled") is not False, "major Action updates may not be silently disabled")
+            major_rules.append(rule)
+        if rule.get("dependencyDashboardApproval") is False:
+            require(update_types, "Dashboard bypass rule must name its allowed update types")
+            require(
+                set(update_types).issubset(expected["dashboard_bypass_update_types"]),
+                "Dashboard bypass may only cover approved non-major update types",
+            )
+            dashboard_bypass_rules.append(rule)
+        if expected["github_runner_dep_type"] in rule.get("matchDepTypes", []):
+            require(rule.get("matchDepTypes") == [expected["github_runner_dep_type"]], "runner hold must be exact")
+            require(rule.get("enabled") is expected["github_runner_updates_enabled"], "GitHub runner updates must stay disabled")
+            runner_hold_rules.append(rule)
+        if expected["zizmor_action_package"] in rule.get("matchPackageNames", []):
+            require(rule.get("matchPackageNames") == [expected["zizmor_action_package"]], "zizmor hold must be exact")
+            require(
+                rule.get("enabled") is expected["zizmor_action_renovate_updates_enabled"],
+                "zizmor action Renovate updates must stay disabled",
+            )
+            zizmor_hold_rules.append(rule)
+
+    require(
+        len(major_rules) == 1 and expected["major_updates_require_dashboard_approval"],
+        "major-update approval invariant changed",
+    )
+    require(len(dashboard_bypass_rules) == 1, "expected one explicit non-major Dashboard bypass rule")
+    require(
+        dashboard_bypass_rules[0].get("matchUpdateTypes") == expected["dashboard_bypass_update_types"],
+        "Dashboard bypass update types drift",
+    )
+    require(len(runner_hold_rules) == 1, "GitHub runner hold rule missing")
+    require(len(zizmor_hold_rules) == 1, "zizmor action hold rule missing")
 
 
 def validate_workflow_security(text: str, policy: dict) -> None:
@@ -106,6 +148,16 @@ def validate_external_uses_tracking(root: Path) -> None:
     require(not errors, "Renovate tracking invariant failed:\n- " + "\n- ".join(errors))
 
 
+def validate_documentation(text: str) -> None:
+    for marker in (
+        "Dependency Dashboard approval is the fail-closed default for every GitHub Actions update",
+        "GitHub-hosted runner labels (`github-runner`, including Ubuntu labels) are disabled",
+        "`zizmorcore/zizmor-action` Renovate updates are disabled",
+        "Renovate does not update this action independently",
+    ):
+        require(marker in text, f"hardening documentation missing governance marker: {marker}")
+
+
 def validate_root(root: Path) -> None:
     policy = load_json(root / "policy" / "dependency-workflow-hardening-v1.json")
     require(policy.get("schema_version") == 1, "dependency workflow policy schema mismatch")
@@ -122,6 +174,7 @@ def validate_root(root: Path) -> None:
 
     doc = root / "docs" / "DEPENDENCY_WORKFLOW_HARDENING_V1.md"
     require(doc.is_file() and doc.stat().st_size > 0, "hardening documentation missing")
+    validate_documentation(doc.read_text(encoding="utf-8"))
 
     boundaries = policy["boundaries"]
     for key in (

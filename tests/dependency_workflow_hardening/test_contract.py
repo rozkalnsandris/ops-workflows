@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from scripts.validate_dependency_workflow_hardening import (
+    validate_documentation,
     validate_renovate,
     validate_root,
     validate_workflow_security,
@@ -43,6 +44,36 @@ class DependencyWorkflowHardeningTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Dashboard approval"):
             validate_renovate(config, self.policy)
 
+    def test_rejects_dashboard_default_removal(self) -> None:
+        config = copy.deepcopy(self.renovate)
+        config["dependencyDashboardApproval"] = False
+        with self.assertRaisesRegex(ValueError, "fail-closed default"):
+            validate_renovate(config, self.policy)
+
+    def test_rejects_major_dashboard_bypass(self) -> None:
+        config = copy.deepcopy(self.renovate)
+        config["packageRules"][0]["matchUpdateTypes"].append("major")
+        with self.assertRaisesRegex(ValueError, "major Action updates"):
+            validate_renovate(config, self.policy)
+
+    def test_rejects_incompatible_pr_creation_mode(self) -> None:
+        config = copy.deepcopy(self.renovate)
+        config["prCreation"] = "approval"
+        with self.assertRaisesRegex(ValueError, "PR creation mode"):
+            validate_renovate(config, self.policy)
+
+    def test_rejects_github_runner_updates(self) -> None:
+        config = copy.deepcopy(self.renovate)
+        config["packageRules"][2]["enabled"] = True
+        with self.assertRaisesRegex(ValueError, "runner updates"):
+            validate_renovate(config, self.policy)
+
+    def test_rejects_partial_zizmor_renovate_updates(self) -> None:
+        config = copy.deepcopy(self.renovate)
+        config["packageRules"][3]["enabled"] = True
+        with self.assertRaisesRegex(ValueError, "zizmor action Renovate updates"):
+            validate_renovate(config, self.policy)
+
     def test_rejects_vulnerability_alert_scope_expansion(self) -> None:
         config = copy.deepcopy(self.renovate)
         config["vulnerabilityAlerts"]["enabled"] = True
@@ -63,6 +94,12 @@ class DependencyWorkflowHardeningTests(unittest.TestCase):
         workflow = self.workflow + "\nsecrets: inherit\n"
         with self.assertRaisesRegex(ValueError, "inherit secrets"):
             validate_workflow_security(workflow, self.policy)
+
+    def test_rejects_missing_zizmor_companion_documentation(self) -> None:
+        doc = (ROOT / "docs" / "DEPENDENCY_WORKFLOW_HARDENING_V1.md").read_text(encoding="utf-8")
+        doc = doc.replace("Renovate does not update this action independently", "Renovate may update this action independently")
+        with self.assertRaisesRegex(ValueError, "documentation missing governance marker"):
+            validate_documentation(doc)
 
 
 if __name__ == "__main__":

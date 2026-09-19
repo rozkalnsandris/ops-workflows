@@ -43,6 +43,17 @@ class DependencyWorkflowHardeningTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Dashboard approval"):
             validate_renovate(config, self.policy)
 
+    def test_rejects_vulnerability_alert_scope_expansion(self) -> None:
+        config = copy.deepcopy(self.renovate)
+        config["vulnerabilityAlerts"]["enabled"] = True
+        with self.assertRaisesRegex(ValueError, "vulnerability alerts"):
+            validate_renovate(config, self.policy)
+
+    def test_rejects_zizmor_mutable_engine_version(self) -> None:
+        workflow = self.workflow.replace('version: "1.29.0"', 'version: "latest"')
+        with self.assertRaisesRegex(ValueError, "engine version"):
+            validate_workflow_security(workflow, self.policy)
+
     def test_rejects_zizmor_advanced_security_permission_expansion(self) -> None:
         workflow = self.workflow.replace('advanced-security: "false"', 'advanced-security: "true"')
         with self.assertRaisesRegex(ValueError, "Advanced Security"):

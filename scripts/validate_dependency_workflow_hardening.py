@@ -33,6 +33,12 @@ def validate_renovate(config: dict, policy: dict) -> None:
     require(config.get("prConcurrentLimit") == expected["pr_concurrent_limit"], "Renovate PR concurrency changed")
     require(config.get("prHourlyLimit") == expected["pr_hourly_limit"], "Renovate PR hourly limit changed")
     require(config.get("commitHourlyLimit") == expected["commit_hourly_limit"], "Renovate commit hourly limit changed")
+    require(config.get("configMigration") is False, "Renovate config migration must stay disabled in the first slice")
+    require(config.get("rebaseWhen") == "conflicted", "Renovate automatic rebasing scope changed")
+
+    vulnerability_alerts = config.get("vulnerabilityAlerts")
+    require(isinstance(vulnerability_alerts, dict), "Renovate vulnerabilityAlerts boundary missing")
+    require(vulnerability_alerts.get("enabled") is expected["vulnerability_alerts"], "Renovate vulnerability alerts must stay disabled")
 
     extends = config.get("extends")
     require(isinstance(extends, list), "Renovate extends must be a list")
@@ -67,6 +73,7 @@ def validate_workflow_security(text: str, policy: dict) -> None:
 
     zizmor = static["zizmor"]
     require(f'zizmorcore/zizmor-action@{zizmor["action_sha"]} # {zizmor["action_version"]}' in text, "zizmor action identity drift")
+    require(f'version: "{zizmor["engine_version"]}"' in text, "zizmor engine version drift")
     require('online-audits: "false"' in text, "zizmor online audits must stay disabled")
     require('advanced-security: "false"' in text, "zizmor must not expand Advanced Security permissions")
     require('annotations: "true"' in text, "zizmor annotations must remain enabled")

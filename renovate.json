@@ -16,6 +16,9 @@
   "prHourlyLimit": 1,
   "commitHourlyLimit": 2,
   "rebaseWhen": "conflicted",
+  "vulnerabilityAlerts": {
+    "enabled": false
+  },
   "packageRules": [
     {
       "description": "Group non-major GitHub Actions updates without granting merge authority",

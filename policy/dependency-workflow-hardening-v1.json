@@ -11,12 +11,26 @@
     "automerge": false,
     "platform_automerge": false,
     "dependency_dashboard": true,
+    "dependency_dashboard_approval_default": true,
+    "pr_creation": "immediate",
     "vulnerability_alerts": false,
     "branch_concurrent_limit": 2,
     "pr_concurrent_limit": 2,
     "pr_hourly_limit": 1,
     "commit_hourly_limit": 2,
-    "major_updates_require_dashboard_approval": true
+    "major_updates_require_dashboard_approval": true,
+    "major_update_types": [
+      "major"
+    ],
+    "dashboard_bypass_update_types": [
+      "digest",
+      "patch",
+      "minor"
+    ],
+    "github_runner_updates_enabled": false,
+    "github_runner_dep_type": "github-runner",
+    "zizmor_action_renovate_updates_enabled": false,
+    "zizmor_action_package": "zizmorcore/zizmor-action"
   },
   "workflow_static_analysis": {
     "reusable_workflow": ".github/workflows/workflow-security.yml",
@@ -33,6 +47,7 @@
       "action_sha": "3dc1ecc9bcb9e94e9b2c709687979e1298497054",
       "action_version": "v0.6.2",
       "engine_version": "1.29.0",
+      "renovate_update_mode": "manual_companion_contract",
       "online_audits": false,
       "advanced_security": false,
       "annotations": true,

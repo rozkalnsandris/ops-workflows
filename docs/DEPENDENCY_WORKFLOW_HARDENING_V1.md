@@ -23,8 +23,10 @@ Required behavior:
 - at most one new PR is created per hour and at most two Renovate commits are created per hour;
 - automatic rebasing is limited to conflicts;
 - GitHub vulnerability-alert PR handling is explicitly disabled in this first slice so the scope stays GitHub-Actions-only and cannot bypass the normal Renovate rate/concurrency lane;
-- non-major GitHub Actions updates may be grouped to reduce CI noise;
-- major GitHub Actions updates require explicit Dependency Dashboard approval before Renovate opens the PR;
+- Dependency Dashboard approval is the fail-closed default for every GitHub Actions update; only the explicitly named `digest`, `patch`, and `minor` update types may bypass it and be grouped to reduce CI noise;
+- major GitHub Actions updates require explicit Dependency Dashboard approval before Renovate opens the PR. `prCreation` remains `immediate`: Renovate's documented approval gate is `dependencyDashboardApproval`, which must not be combined with `prCreation: "approval"`;
+- GitHub-hosted runner labels (`github-runner`, including Ubuntu labels) are disabled for this canary slice until actionlint and repository contracts intentionally support an update;
+- `zizmorcore/zizmor-action` Renovate updates are disabled. A zizmor update must be a manual companion change that updates the action SHA/ref, exact supported engine version, machine policy, and this documentation together; this preserves exact pinning while preventing an intentionally invalid partial Renovate PR;
 - Renovate PRs are ordinary reviewable source PRs and are never merge authority.
 
 The hosted Mend Renovate GitHub App is the intended executor. **Installing or authorizing that app is a separate owner repository-permission action.** Committing this config does not install the app and does not grant repository settings or permissions authority.
@@ -59,6 +61,7 @@ It is designed to be called by consumers only through a reviewed exact `ops-work
 
 - `zizmorcore/zizmor-action` is pinned to exact commit `3dc1ecc9bcb9e94e9b2c709687979e1298497054` (`v0.6.2`);
 - the action is also told to run exact supported zizmor engine version `1.29.0` rather than its mutable `latest` alias;
+- Renovate does not update this action independently: its reviewed maintenance unit is the action/ref, engine, policy, validator expectation, and this documented compatibility statement;
 - collection is limited to workflows;
 - online audits are disabled;
 - regular persona with medium severity/confidence floor is used to keep the first shared gate focused;

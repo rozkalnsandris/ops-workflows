@@ -8,6 +8,8 @@
     "github-actions"
   ],
   "dependencyDashboard": true,
+  "dependencyDashboardApproval": true,
+  "prCreation": "immediate",
   "automerge": false,
   "platformAutomerge": false,
   "configMigration": false,
@@ -21,7 +23,7 @@
   },
   "packageRules": [
     {
-      "description": "Group non-major GitHub Actions updates without granting merge authority",
+      "description": "Allow only known non-major GitHub Actions updates to bypass the default Dashboard approval gate",
       "matchManagers": [
         "github-actions"
       ],
@@ -30,6 +32,7 @@
         "patch",
         "minor"
       ],
+      "dependencyDashboardApproval": false,
       "groupName": "GitHub Actions non-major updates",
       "groupSlug": "github-actions-non-major",
       "automerge": false
@@ -43,6 +46,28 @@
         "major"
       ],
       "dependencyDashboardApproval": true,
+      "automerge": false
+    },
+    {
+      "description": "Hold GitHub-hosted runner label updates until actionlint and contracts intentionally adopt them",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchDepTypes": [
+        "github-runner"
+      ],
+      "enabled": false,
+      "automerge": false
+    },
+    {
+      "description": "Hold zizmor action updates until the action, engine, policy, and documentation are reviewed together",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchPackageNames": [
+        "zizmorcore/zizmor-action"
+      ],
+      "enabled": false,
       "automerge": false
     }
   ]

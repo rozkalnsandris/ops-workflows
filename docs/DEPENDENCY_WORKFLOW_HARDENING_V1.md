@@ -18,9 +18,11 @@ Required behavior:
 - external Actions and reusable workflows remain pinned to full 40-character commit SHAs;
 - a verified version/ref comment is retained beside each digest so Renovate can resolve and update the pin;
 - `helpers:pinGitHubActionDigests` is enabled;
-- Renovate never automerges;
+- Renovate never automerges and platform-native automerge is disabled;
 - at most two Renovate branches/PRs are open concurrently;
 - at most one new PR is created per hour and at most two Renovate commits are created per hour;
+- automatic rebasing is limited to conflicts;
+- GitHub vulnerability-alert PR handling is explicitly disabled in this first slice so the scope stays GitHub-Actions-only and cannot bypass the normal Renovate rate/concurrency lane;
 - non-major GitHub Actions updates may be grouped to reduce CI noise;
 - major GitHub Actions updates require explicit Dependency Dashboard approval before Renovate opens the PR;
 - Renovate PRs are ordinary reviewable source PRs and are never merge authority.
@@ -56,6 +58,7 @@ It is designed to be called by consumers only through a reviewed exact `ops-work
 ### zizmor
 
 - `zizmorcore/zizmor-action` is pinned to exact commit `3dc1ecc9bcb9e94e9b2c709687979e1298497054` (`v0.6.2`);
+- the action is also told to run exact supported zizmor engine version `1.29.0` rather than its mutable `latest` alias;
 - collection is limited to workflows;
 - online audits are disabled;
 - regular persona with medium severity/confidence floor is used to keep the first shared gate focused;

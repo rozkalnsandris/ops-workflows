@@ -69,6 +69,20 @@
       ],
       "enabled": false,
       "automerge": false
+    },
+    {
+      "description": "Hold zizmor engine input updates until the action, engine, policy, and documentation are reviewed together",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/zizmorcore/zizmor"
+      ],
+      "matchDepTypes": [
+        "uses-with"
+      ],
+      "enabled": false,
+      "automerge": false
     }
   ]
 }

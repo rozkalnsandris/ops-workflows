@@ -26,8 +26,10 @@ Required behavior:
 - Dependency Dashboard approval is the fail-closed default for every GitHub Actions update; only the explicitly named `digest`, `patch`, and `minor` update types may bypass it and be grouped to reduce CI noise;
 - major GitHub Actions updates require explicit Dependency Dashboard approval before Renovate opens the PR. `prCreation` remains `immediate`: Renovate's documented approval gate is `dependencyDashboardApproval`, which must not be combined with `prCreation: "approval"`;
 - GitHub-hosted runner labels (`github-runner`, including Ubuntu labels) are disabled for this canary slice until actionlint and repository contracts intentionally support an update;
-- `zizmorcore/zizmor-action` Renovate updates are disabled. A zizmor update must be a manual companion change that updates the action SHA/ref, exact supported engine version, machine policy, and this documentation together; this preserves exact pinning while preventing an intentionally invalid partial Renovate PR;
+- `zizmorcore/zizmor-action` and its separate `ghcr.io/zizmorcore/zizmor` `uses-with` engine input are both disabled for Renovate. A zizmor update must be a manual companion change that updates the action SHA/ref, exact supported engine version, machine policy, and this documentation together; this preserves exact pinning while preventing an intentionally invalid partial Renovate PR;
 - Renovate PRs are ordinary reviewable source PRs and are never merge authority.
+
+Dependency Dashboard approval is a creation gate. It does not retroactively close a major Renovate PR that existed before this policy was active, and a green CI result on such a PR is not Dashboard approval. That stale PR remains an explicit reconciliation decision; when manual close is forbidden, it must remain open and must not be silently reinterpreted as approved or merge-ready.
 
 The hosted Mend Renovate GitHub App is the intended executor. **Installing or authorizing that app is a separate owner repository-permission action.** Committing this config does not install the app and does not grant repository settings or permissions authority.
 
@@ -61,7 +63,7 @@ It is designed to be called by consumers only through a reviewed exact `ops-work
 
 - `zizmorcore/zizmor-action` is pinned to exact commit `3dc1ecc9bcb9e94e9b2c709687979e1298497054` (`v0.6.2`);
 - the action is also told to run exact supported zizmor engine version `1.29.0` rather than its mutable `latest` alias;
-- Renovate does not update this action independently: its reviewed maintenance unit is the action/ref, engine, policy, validator expectation, and this documented compatibility statement;
+- Renovate does not update this action or its `ghcr.io/zizmorcore/zizmor` `uses-with` engine input independently: its reviewed maintenance unit is the action/ref, engine, policy, validator expectation, and this documented compatibility statement;
 - collection is limited to workflows;
 - online audits are disabled;
 - regular persona with medium severity/confidence floor is used to keep the first shared gate focused;

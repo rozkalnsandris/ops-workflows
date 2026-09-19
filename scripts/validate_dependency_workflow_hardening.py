@@ -52,11 +52,12 @@ def validate_renovate(config: dict, policy: dict) -> None:
 
     package_rules = config.get("packageRules")
     require(isinstance(package_rules, list) and package_rules, "Renovate package rules missing")
-    require(len(package_rules) == 4, "unexpected Renovate package rule requires policy review")
+    require(len(package_rules) == 5, "unexpected Renovate package rule requires policy review")
     major_rules: list[dict] = []
     dashboard_bypass_rules: list[dict] = []
     runner_hold_rules: list[dict] = []
     zizmor_hold_rules: list[dict] = []
+    zizmor_engine_hold_rules: list[dict] = []
     for rule in package_rules:
         require(isinstance(rule, dict), "Renovate package rule must be an object")
         require(rule.get("matchManagers") == expected["enabled_managers"], "package rule manager scope drift")
@@ -85,6 +86,17 @@ def validate_renovate(config: dict, policy: dict) -> None:
                 "zizmor action Renovate updates must stay disabled",
             )
             zizmor_hold_rules.append(rule)
+        if expected["zizmor_engine_package"] in rule.get("matchPackageNames", []):
+            require(rule.get("matchPackageNames") == [expected["zizmor_engine_package"]], "zizmor engine hold must be exact")
+            require(
+                rule.get("matchDepTypes") == [expected["zizmor_engine_dep_type"]],
+                "zizmor engine hold dependency type drift",
+            )
+            require(
+                rule.get("enabled") is expected["zizmor_engine_renovate_updates_enabled"],
+                "zizmor engine Renovate updates must stay disabled",
+            )
+            zizmor_engine_hold_rules.append(rule)
 
     require(
         len(major_rules) == 1 and expected["major_updates_require_dashboard_approval"],
@@ -97,6 +109,7 @@ def validate_renovate(config: dict, policy: dict) -> None:
     )
     require(len(runner_hold_rules) == 1, "GitHub runner hold rule missing")
     require(len(zizmor_hold_rules) == 1, "zizmor action hold rule missing")
+    require(len(zizmor_engine_hold_rules) == 1, "zizmor engine hold rule missing")
 
 
 def validate_workflow_security(text: str, policy: dict) -> None:
@@ -152,8 +165,9 @@ def validate_documentation(text: str) -> None:
     for marker in (
         "Dependency Dashboard approval is the fail-closed default for every GitHub Actions update",
         "GitHub-hosted runner labels (`github-runner`, including Ubuntu labels) are disabled",
-        "`zizmorcore/zizmor-action` Renovate updates are disabled",
-        "Renovate does not update this action independently",
+        "`zizmorcore/zizmor-action` and its separate `ghcr.io/zizmorcore/zizmor` `uses-with` engine input are both disabled",
+        "Dependency Dashboard approval is a creation gate.",
+        "Renovate does not update this action or its `ghcr.io/zizmorcore/zizmor` `uses-with` engine input independently",
     ):
         require(marker in text, f"hardening documentation missing governance marker: {marker}")
 

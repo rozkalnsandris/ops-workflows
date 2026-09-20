@@ -86,11 +86,18 @@ Machine-readable invariants:
 
 `ops-workflows` remains GitHub-side only; trusted production execution stays in the consuming runtime project. No manifest means no automatic live mutation. Consumers must pin accepted production policy references to an immutable exact commit SHA.
 
-## SIMPLE-DEPLOY v1 — design / not active
+## SIMPLE-DEPLOY v1 — shared source contract / consumer activation separate
 
-Architecture umbrella `#94` defines the planned shared deployment platform for compatible current and future services.
+Architecture umbrella `#94` defines the shared deployment platform for compatible current and future services. The normative GitHub-side implementation contract is:
 
-Canonical design plan:
+`docs/SIMPLE_DEPLOY_V1.md`
+
+Machine policy and consumer schema:
+
+`policy/simple-deploy-v1.json`
+`policy/schemas/simple-deploy-consumer-v1.schema.json`
+
+Architecture/design history remains in:
 
 `docs/SIMPLE_DEPLOY_V1_PLAN.md`
 
@@ -142,7 +149,7 @@ Key implementation rules:
 
 The design reuses Auto-Live exact-target/reconciliation/concurrency/fail-closed primitives and keeps Simple LIVE for sensitive or exceptional operations. It does not permit `ops-workflows` to become a credential store, generic remote shell, privileged RPi5 runner or arbitrary production transaction engine.
 
-This is **not active production policy yet**. Existing consumer repository-local deployment contracts remain authoritative until each consumer explicitly adopts the final shared contract and completes its reviewed cutover.
+The shared source contract is **not automatic consumer activation**. Existing consumer repository-local deployment contracts remain authoritative until each consumer explicitly adopts an accepted immutable shared revision and completes its reviewed cutover.
 
 ## AUTO-RUN FULL Queue v1
 

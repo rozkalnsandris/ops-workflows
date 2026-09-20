@@ -1,0 +1,37 @@
+name: SIMPLE-DEPLOY policy gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: simple-deploy-policy-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run focused SIMPLE-DEPLOY tests
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m unittest -v tests.simple_deploy.test_contract
+
+      - name: Validate shared SIMPLE-DEPLOY contract
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 scripts/validate_simple_deploy.py --root .

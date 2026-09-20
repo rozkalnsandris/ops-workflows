@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "policy": "SIMPLE_DEPLOY_V1",
+  "status": "SHARED_SOURCE_CONTRACT_NOT_CONSUMER_ACTIVE",
+  "canonical_repository": "rozkalnsandris/ops-workflows",
+  "tracking_issue": 97,
+  "ordinary_deploy_class": "AUTO_DEPLOY_SAFE",
+  "activation": {
+    "shared_merge_auto_migrates_consumers": false,
+    "consumer_source_adoption_required": true,
+    "one_time_runtime_cutover_required": true,
+    "ordinary_release_requires_fresh_live_after_cutover": false,
+    "sensitive_operations_remain_separately_gated": true
+  },
+  "workflow": {
+    "path": ".github/workflows/simple-deploy.yml",
+    "trigger": "workflow_call",
+    "manifest_path": ".simple-deploy.json",
+    "github_hosted_runner": "ubuntu-24.04",
+    "self_hosted_runner_allowed": false,
+    "caller_permissions": {
+      "contents": "read",
+      "packages": "write"
+    },
+    "write_all_allowed": false,
+    "environment": "production",
+    "manual_environment_reviewer_in_baseline": false,
+    "concurrency_owner": "called_workflow",
+    "caller_generic_concurrency_allowed": false,
+    "shared_revision_source": "job.workflow_sha"
+  },
+  "identity": {
+    "source_sha_must_equal_event_sha": true,
+    "source_must_be_default_branch": true,
+    "exact_sha_image_tag_required": true,
+    "canonical_deployment_identity": "immutable_registry_digest",
+    "digest_pattern": "^sha256:[0-9a-f]{64}$",
+    "production_pointer": "production",
+    "production_pointer_is_discovery_only": true,
+    "build_once_promote_exact_digest": true,
+    "pointer_must_resolve_to_built_digest": true
+  },
+  "manifest": {
+    "schema": "rozkalns.simple-deploy.consumer.v1",
+    "schema_path": "policy/schemas/simple-deploy-consumer-v1.schema.json",
+    "allowed_architectures": [
+      "linux/arm64"
+    ],
+    "runtime_class": "rpi5-compose",
+    "image_must_match_consumer_repository": true,
+    "required_forbidden_operations": [
+      "database-schema-data-mutation",
+      "destructive-recovery",
+      "secrets-credentials-permissions",
+      "cloudflare-dns-network",
+      "private-provider-activation",
+      "unrelated-host-control"
+    ]
+  },
+  "registry": {
+    "public_anonymous_pull_profile": "public-anonymous-pull",
+    "private_read_only_profile": "private-read-only",
+    "private_runtime_auth_is_separate_reviewed_profile": true,
+    "workflow_accepts_runtime_registry_credentials": false
+  },
+  "intent": {
+    "schema": "rozkalns.simple-deploy.intent.v1",
+    "public_safe": true,
+    "bind_consumer_repository": true,
+    "bind_source_sha": true,
+    "bind_image": true,
+    "bind_digest": true,
+    "bind_production_pointer": true,
+    "bind_target_alias": true,
+    "bind_manifest_sha256": true,
+    "bind_shared_workflow_repository": true,
+    "bind_shared_workflow_sha": true
+  },
+  "failure": {
+    "pre_mutation_fail_closed": true,
+    "pointer_candidate_frozen_for_attempt": true,
+    "automatic_destructive_rollback": false,
+    "automatic_cleanup": false,
+    "alternate_image_or_tag": false,
+    "arbitrary_retry_loop": false
+  },
+  "boundaries": {
+    "ops_workflows_executes_rpi5_mutation": false,
+    "ops_workflows_stores_production_credentials": false,
+    "workflow_accepts_arbitrary_shell_argv_or_environment": false,
+    "workflow_accepts_arbitrary_host_path": false,
+    "workflow_accepts_secret_values_in_manifest": false,
+    "ordinary_deploy_includes_database_or_data_mutation": false,
+    "ordinary_deploy_includes_network_or_cloudflare_mutation": false,
+    "ordinary_deploy_includes_unrelated_host_control": false,
+    "persistent_privileged_public_self_hosted_runner": false,
+    "repository_local_stricter_rules_win": true
+  },
+  "fleet_upgrade": {
+    "consumer_pin_must_be_full_commit_sha": true,
+    "renovate_version_comment_required": true,
+    "mutable_main_tag_or_version_branch_forbidden": true,
+    "shared_merge_has_no_instant_fleet_blast_radius": true
+  },
+  "compatibility": {
+    "auto_live_v1_primitives_reused": true,
+    "simple_live_remains_for_sensitive_or_exceptional_operations": true,
+    "github_only_live_all_remains_during_migration": true,
+    "queue_vnext_issue": 96,
+    "queue_vnext_blocked_until_fleet_stable": true
+  },
+  "handoff": {
+    "trusted_executor_repository": "rozkalnsandris/RPi5_main",
+    "trusted_executor_issue": 666,
+    "first_canary_repository": "rozkalnsandris/rozkalns_weather",
+    "first_canary_issue": 142
+  }
+}

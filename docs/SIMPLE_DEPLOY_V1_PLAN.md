@@ -1,6 +1,6 @@
 # SIMPLE-DEPLOY v1 — shared deployment platform plan
 
-**Status:** DESIGN / NOT ACTIVE  
+**Status:** ARCHITECTURE / DESIGN HISTORY; normative implementation contract: `docs/SIMPLE_DEPLOY_V1.md`
 **Canonical repository:** `rozkalnsandris/ops-workflows`  
 **Tracking issue:** `#94`  
 **First planned canary:** `rozkalnsandris/rozkalns_weather#142`  
@@ -28,7 +28,7 @@ AUTO-RUN FULL
 
 After a consumer has completed its one-time SIMPLE-DEPLOY adoption/cutover, an ordinary application release should not require a project-specific broker/operator/JIT/deploy-queue control plane or a new manual LIVE approval for every normal release.
 
-This document is a design plan only. It does not activate automatic production mutation, install an RPi5 executor, change repository permissions, mutate a database, change Cloudflare/network state, or alter credentials/secrets.
+This document records the architecture/design rationale. Branches and commits that contain `docs/SIMPLE_DEPLOY_V1.md` use that document plus `policy/simple-deploy-v1.json` as the normative implementation contract. Neither this plan nor the normative shared source contract activates automatic production mutation, installs an RPi5 executor, changes repository permissions, mutates a database, changes Cloudflare/network state, or alters credentials/secrets.
 
 ## 2. Design principles
 

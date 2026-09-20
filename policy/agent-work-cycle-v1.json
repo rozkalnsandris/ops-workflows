@@ -17,6 +17,19 @@
     "historical_ci_comments_reviews_by_default": false,
     "demand_driven_expansion": true
   },
+  "tool_transport_priority": {
+    "default_surface": "GITHUB",
+    "prefer_connected_github_for_github_native_work": true,
+    "rdc_or_host_shell_only_when_host_local_execution_or_observation_is_required": true,
+    "rdc_must_not_substitute_for_supported_github_native_operations": true,
+    "mixed_surface_order": [
+      "GITHUB",
+      "MINIMAL_REQUIRED_HOST_STEP",
+      "GITHUB"
+    ],
+    "rdc_is_execution_transport_not_source_or_authorization_authority": true,
+    "rdc_never_widens_authorization": true
+  },
   "owner_gates": {
     "merge_explicit_by_default": true,
     "repo_local_explicit_full_mode_may_freeze_issue_scoped_merge_authority": true,
@@ -43,6 +56,7 @@
   },
   "rollout_repositories": [
     "rozkalnsandris/ops-workflows",
+    "rozkalnsandris/RPi5_main",
     "rozkalnsandris/hermes-deals",
     "rozkalnsandris/hermes-tech",
     "rozkalnsandris/rozkalns-cv",
@@ -50,12 +64,15 @@
     "rozkalnsandris/dashboard_RPi5",
     "rozkalnsandris/RPi5-maintenance",
     "rozkalnsandris/home-assistant-config",
-    "rozkalnsandris/balcony-irrigation-esp32"
+    "rozkalnsandris/balcony-irrigation-esp32",
+    "rozkalnsandris/rozkalns_weather",
+    "rozkalnsandris/linux-operations-lab"
   ],
   "explicit_exclusions": [
     "rozkalnsandris/deploy-authorizations",
     "rozkalnsandris/hermes-email-skill",
-    "rozkalnsandris/YouTube_Marcim"
+    "rozkalnsandris/YouTube_Marcim",
+    "rozkalnsandris/rozkalnsandris"
   ],
   "repo_local_stricter_rules_win": true
 }

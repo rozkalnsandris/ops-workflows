@@ -1,0 +1,319 @@
+name: SIMPLE-DEPLOY v1
+
+on:
+  workflow_call:
+    inputs:
+      source_sha:
+        description: Exact merged caller SHA to build and publish
+        required: true
+        type: string
+    outputs:
+      image:
+        description: Caller-bound GHCR image identity
+        value: ${{ jobs.publish.outputs.image }}
+      image_digest:
+        description: Immutable published image digest
+        value: ${{ jobs.publish.outputs.image_digest }}
+      image_ref:
+        description: Immutable image@digest deployment identity
+        value: ${{ jobs.publish.outputs.image_ref }}
+      production_pointer:
+        description: Mutable discovery pointer advanced to the immutable digest
+        value: ${{ jobs.publish.outputs.production_pointer }}
+      target_alias:
+        description: Validated production target alias
+        value: ${{ jobs.publish.outputs.target_alias }}
+      intent_json:
+        description: Deterministic public-safe SIMPLE-DEPLOY intent
+        value: ${{ jobs.publish.outputs.intent_json }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  validate:
+    name: Validate immutable source and consumer contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      repository: ${{ steps.manifest.outputs.repository }}
+      image: ${{ steps.manifest.outputs.image }}
+      target_alias: ${{ steps.manifest.outputs.target_alias }}
+      build_context: ${{ steps.manifest.outputs.build_context }}
+      dockerfile: ${{ steps.manifest.outputs.dockerfile }}
+      architecture: ${{ steps.manifest.outputs.architecture }}
+      compose_project: ${{ steps.manifest.outputs.compose_project }}
+      compose_file: ${{ steps.manifest.outputs.compose_file }}
+      compose_service: ${{ steps.manifest.outputs.compose_service }}
+      liveness_path: ${{ steps.manifest.outputs.liveness_path }}
+      readiness_state: ${{ steps.manifest.outputs.readiness_state }}
+      readiness_path: ${{ steps.manifest.outputs.readiness_path }}
+      pull_profile: ${{ steps.manifest.outputs.pull_profile }}
+      persistence_json: ${{ steps.manifest.outputs.persistence_json }}
+      manifest_sha256: ${{ steps.manifest.outputs.manifest_sha256 }}
+      shared_repository: ${{ steps.shared_identity.outputs.repository }}
+      shared_sha: ${{ steps.shared_identity.outputs.sha }}
+    steps:
+      - name: Check out exact caller source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Bind exact merged default-branch source
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          EVENT_SHA: ${{ github.sha }}
+          EVENT_REF: ${{ github.ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "${SOURCE_SHA}" =~ ^[0-9a-f]{40}$ ]] || { echo 'source_sha must be a full commit SHA' >&2; exit 1; }
+          [[ "${SOURCE_SHA}" == "${EVENT_SHA}" ]] || { echo 'source_sha must equal the caller event SHA' >&2; exit 1; }
+          [[ "${EVENT_REF}" == "refs/heads/${DEFAULT_BRANCH}" ]] || { echo 'SIMPLE-DEPLOY only accepts the caller default branch' >&2; exit 1; }
+          [[ "$(git rev-parse HEAD)" == "${SOURCE_SHA}" ]] || { echo 'checked-out source does not match source_sha' >&2; exit 1; }
+
+      - name: Resolve reusable workflow identity
+        id: shared_identity
+        env:
+          JOB_CONTEXT_JSON: ${{ toJSON(job) }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          job = json.loads(os.environ["JOB_CONTEXT_JSON"])
+          repository = job.get("workflow_repository")
+          sha = job.get("workflow_sha")
+          if repository != "rozkalnsandris/ops-workflows":
+              raise SystemExit(f"unexpected reusable workflow repository: {repository!r}")
+          if not isinstance(sha, str) or re.fullmatch(r"[0-9a-f]{40}", sha) is None:
+              raise SystemExit("reusable workflow must execute from an immutable commit SHA")
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as handle:
+              handle.write(f"repository={repository}\n")
+              handle.write(f"sha={sha}\n")
+          PY
+
+      - name: Check out immutable shared contract
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ steps.shared_identity.outputs.repository }}
+          ref: ${{ steps.shared_identity.outputs.sha }}
+          path: .simple-deploy-shared
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Bind shared workflow identity
+        env:
+          SHARED_SHA: ${{ steps.shared_identity.outputs.sha }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(git -C .simple-deploy-shared rev-parse HEAD)" == "${SHARED_SHA}" ]] || { echo 'shared contract checkout does not match reusable workflow SHA' >&2; exit 1; }
+
+      - name: Validate fixed consumer manifest
+        id: manifest
+        env:
+          EXPECTED_REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 .simple-deploy-shared/scripts/validate_simple_deploy.py \
+            --manifest .simple-deploy.json \
+            --expected-repository "${EXPECTED_REPOSITORY}" \
+            --github-output "${GITHUB_OUTPUT}"
+
+  publish:
+    name: Build, publish, and promote immutable image
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+    concurrency:
+      group: simple-deploy-${{ needs.validate.outputs.target_alias }}
+      cancel-in-progress: false
+    outputs:
+      image: ${{ steps.receipt.outputs.image }}
+      image_digest: ${{ steps.receipt.outputs.image_digest }}
+      image_ref: ${{ steps.receipt.outputs.image_ref }}
+      production_pointer: ${{ steps.receipt.outputs.production_pointer }}
+      target_alias: ${{ steps.receipt.outputs.target_alias }}
+      intent_json: ${{ steps.receipt.outputs.intent_json }}
+    steps:
+      - name: Check out exact caller source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Revalidate exact source before publication
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(git rev-parse HEAD)" == "${SOURCE_SHA}" ]] || { echo 'publication source drifted from source_sha' >&2; exit 1; }
+
+      - name: Set up ARM64 emulation
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Authenticate GHCR for publication only
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+          GHCR_ACTOR: ${{ github.actor }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          printf '%s' "${GHCR_TOKEN}" | docker login ghcr.io --username "${GHCR_ACTOR}" --password-stdin >/dev/null
+
+      - name: Build once and publish exact source tag
+        id: build
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          SHARED_SHA: ${{ needs.validate.outputs.shared_sha }}
+          IMAGE: ${{ needs.validate.outputs.image }}
+          TARGET_ALIAS: ${{ needs.validate.outputs.target_alias }}
+          ARCHITECTURE: ${{ needs.validate.outputs.architecture }}
+          BUILD_CONTEXT: ${{ needs.validate.outputs.build_context }}
+          DOCKERFILE: ${{ needs.validate.outputs.dockerfile }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          metadata="${RUNNER_TEMP}/simple-deploy-build-metadata.json"
+          docker buildx build \
+            --platform "${ARCHITECTURE}" \
+            --file "${DOCKERFILE}" \
+            --label "org.opencontainers.image.revision=${SOURCE_SHA}" \
+            --label "io.rozkalns.simple-deploy.target=${TARGET_ALIAS}" \
+            --label "io.rozkalns.simple-deploy.shared-revision=${SHARED_SHA}" \
+            --tag "${IMAGE}:${SOURCE_SHA}" \
+            --push \
+            --metadata-file "${metadata}" \
+            "${BUILD_CONTEXT}"
+          python3 - "${metadata}" "${GITHUB_OUTPUT}" <<'PY'
+          import json
+          import re
+          import sys
+          from pathlib import Path
+
+          metadata = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          digest = metadata.get("containerimage.digest")
+          if not isinstance(digest, str) or re.fullmatch(r"sha256:[0-9a-f]{64}", digest) is None:
+              raise SystemExit("build metadata did not contain an immutable registry digest")
+          with Path(sys.argv[2]).open("a", encoding="utf-8") as handle:
+              handle.write(f"digest={digest}\n")
+          PY
+
+      - name: Advance production discovery pointer to exact digest
+        env:
+          IMAGE: ${{ needs.validate.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          metadata="${RUNNER_TEMP}/simple-deploy-promotion-metadata.json"
+          docker buildx imagetools create \
+            --prefer-index=false \
+            --tag "${IMAGE}:production" \
+            --metadata-file "${metadata}" \
+            "${IMAGE}@${DIGEST}"
+          python3 - "${metadata}" "${DIGEST}" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          metadata = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          promoted = metadata.get("containerimage.descriptor", {}).get("digest")
+          if promoted != sys.argv[2]:
+              raise SystemExit(f"production pointer digest mismatch: expected {sys.argv[2]}, got {promoted}")
+          PY
+
+      - name: Emit deterministic public-safe intent
+        id: receipt
+        env:
+          CONSUMER_REPOSITORY: ${{ needs.validate.outputs.repository }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          IMAGE: ${{ needs.validate.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          TARGET_ALIAS: ${{ needs.validate.outputs.target_alias }}
+          MANIFEST_SHA256: ${{ needs.validate.outputs.manifest_sha256 }}
+          PULL_PROFILE: ${{ needs.validate.outputs.pull_profile }}
+          COMPOSE_PROJECT: ${{ needs.validate.outputs.compose_project }}
+          COMPOSE_FILE: ${{ needs.validate.outputs.compose_file }}
+          COMPOSE_SERVICE: ${{ needs.validate.outputs.compose_service }}
+          LIVENESS_PATH: ${{ needs.validate.outputs.liveness_path }}
+          READINESS_STATE: ${{ needs.validate.outputs.readiness_state }}
+          READINESS_PATH: ${{ needs.validate.outputs.readiness_path }}
+          PERSISTENCE_JSON: ${{ needs.validate.outputs.persistence_json }}
+          SHARED_REPOSITORY: ${{ needs.validate.outputs.shared_repository }}
+          SHARED_SHA: ${{ needs.validate.outputs.shared_sha }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          image = os.environ["IMAGE"]
+          digest = os.environ["DIGEST"]
+          intent = {
+              "schema": "rozkalns.simple-deploy.intent.v1",
+              "consumer_repository": os.environ["CONSUMER_REPOSITORY"],
+              "source_sha": os.environ["SOURCE_SHA"],
+              "image": image,
+              "digest": digest,
+              "image_ref": f"{image}@{digest}",
+              "production_pointer": f"{image}:production",
+              "target_alias": os.environ["TARGET_ALIAS"],
+              "manifest_sha256": os.environ["MANIFEST_SHA256"],
+              "registry_pull_profile": os.environ["PULL_PROFILE"],
+              "compose": {
+                  "project": os.environ["COMPOSE_PROJECT"],
+                  "file": os.environ["COMPOSE_FILE"],
+                  "service": os.environ["COMPOSE_SERVICE"],
+              },
+              "health": {
+                  "liveness_path": os.environ["LIVENESS_PATH"],
+                  "readiness_state": os.environ["READINESS_STATE"],
+                  "readiness_path": os.environ["READINESS_PATH"] or None,
+              },
+              "persistent_volumes": json.loads(os.environ["PERSISTENCE_JSON"]),
+              "shared_workflow_repository": os.environ["SHARED_REPOSITORY"],
+              "shared_workflow_sha": os.environ["SHARED_SHA"],
+          }
+          canonical = json.dumps(intent, sort_keys=True, separators=(",", ":"))
+          output = Path(os.environ["GITHUB_OUTPUT"])
+          with output.open("a", encoding="utf-8") as handle:
+              handle.write(f"image={image}\n")
+              handle.write(f"image_digest={digest}\n")
+              handle.write(f"image_ref={image}@{digest}\n")
+              handle.write(f"production_pointer={image}:production\n")
+              handle.write(f"target_alias={intent['target_alias']}\n")
+              handle.write(f"intent_json={canonical}\n")
+          summary = Path(os.environ["GITHUB_STEP_SUMMARY"])
+          with summary.open("a", encoding="utf-8") as handle:
+              handle.write("## SIMPLE-DEPLOY v1 intent\n\n")
+              handle.write("The mutable `production` tag is discovery only. The immutable digest below is the deployment identity.\n\n")
+              handle.write("```json\n")
+              handle.write(json.dumps(intent, sort_keys=True, indent=2))
+              handle.write("\n```\n")
+          PY

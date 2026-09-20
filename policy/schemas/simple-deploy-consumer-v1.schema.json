@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rozkalnsandris/ops-workflows/policy/schemas/simple-deploy-consumer-v1.schema.json",
+  "title": "SIMPLE-DEPLOY consumer manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "repository",
+    "image",
+    "build",
+    "target",
+    "compose",
+    "health",
+    "persistence",
+    "registry",
+    "forbidden_operations"
+  ],
+  "properties": {
+    "schema": {
+      "const": "rozkalns.simple-deploy.consumer.v1"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "image": {
+      "type": "string",
+      "pattern": "^ghcr\\.io/[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._-]*$"
+    },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["context", "dockerfile", "architecture"],
+      "properties": {
+        "context": {
+          "type": "string",
+          "pattern": "^(?:\\.|[A-Za-z0-9_-][A-Za-z0-9._-]*(?:/[A-Za-z0-9_-][A-Za-z0-9._-]*)*)$"
+        },
+        "dockerfile": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-][A-Za-z0-9._-]*(?:/[A-Za-z0-9_-][A-Za-z0-9._-]*)*$"
+        },
+        "architecture": {
+          "const": "linux/arm64"
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alias", "runtime_class"],
+      "properties": {
+        "alias": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "runtime_class": {
+          "const": "rpi5-compose"
+        }
+      }
+    },
+    "compose": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project", "file", "service"],
+      "properties": {
+        "project": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$"
+        },
+        "file": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-][A-Za-z0-9._-]*(?:/[A-Za-z0-9_-][A-Za-z0-9._-]*)*$"
+        },
+        "service": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$"
+        }
+      }
+    },
+    "health": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["liveness_path", "readiness"],
+      "properties": {
+        "liveness_path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^/[A-Za-z0-9._~/-]*$"
+        },
+        "readiness": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state"],
+          "properties": {
+            "state": {
+              "enum": ["required", "not-applicable"]
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^/[A-Za-z0-9._~/-]*$"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {"state": {"const": "required"}},
+                "required": ["state"]
+              },
+              "then": {
+                "required": ["path"]
+              },
+              "else": {
+                "not": {"required": ["path"]}
+              }
+            }
+          ]
+        }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["volumes"],
+      "properties": {
+        "volumes": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$"
+          }
+        }
+      }
+    },
+    "registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pull_profile"],
+      "properties": {
+        "pull_profile": {
+          "enum": ["public-anonymous-pull", "private-read-only"]
+        }
+      }
+    },
+    "forbidden_operations": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "database-schema-data-mutation",
+          "destructive-recovery",
+          "secrets-credentials-permissions",
+          "cloudflare-dns-network",
+          "private-provider-activation",
+          "unrelated-host-control"
+        ]
+      }
+    }
+  }
+}

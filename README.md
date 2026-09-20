@@ -10,6 +10,7 @@ This repository contains shared GitHub-side automation and policy:
 - FAST-LANE v2.2 Composite delivery policy;
 - the FAST-LANE v2.2 decision record and migration rationale;
 - Auto-Live v1 shared post-merge delivery contract;
+- SIMPLE-DEPLOY v1 shared platform design for one reusable deployment model across compatible services;
 - AUTO-RUN FULL Queue v1 shared source-policy design;
 - legacy `GITHUB-ONLY` / `LIVE-ALL` deferred deployment policy and queue during consumer migration;
 - public-repository CI/security policy;
@@ -63,6 +64,50 @@ Machine-readable invariants:
 `policy/auto-live-v1.json`
 
 `ops-workflows` remains GitHub-side only; trusted production execution stays in the consuming runtime project. No manifest means no automatic live mutation. Consumers must pin accepted production policy references to an immutable exact commit SHA.
+
+## SIMPLE-DEPLOY v1 — design / not active
+
+Tracking issue `#94` defines the planned shared deployment platform for compatible current and future services.
+
+Canonical design plan:
+
+`docs/SIMPLE_DEPLOY_V1_PLAN.md`
+
+Target ordinary-release UX after a consumer has explicitly migrated and completed its one-time cutover:
+
+```text
+AUTO-RUN FULL
+-> exact-head CI PASS
+-> merge
+-> shared reusable SIMPLE-DEPLOY workflow
+-> GitHub-hosted image build
+-> GHCR exact-SHA image + immutable digest
+-> production promotion
+-> trusted RPi5 pull deploy
+-> docker compose up --wait
+-> health/readiness
+-> LIVE
+```
+
+The intended architecture is deliberately split:
+
+- `ops-workflows` owns reusable GitHub-side policy/workflows, image publication/promotion, schemas, shared tests and migration rules;
+- `RPi5_main` owns one generic trusted `rozkalns-simple-deployer`-style host executor;
+- consumer repositories keep only a tiny immutable-SHA-pinned caller plus application-specific deployment manifest and health/persistence identities.
+
+Production consumers will pin the accepted shared workflow/policy to an immutable full `ops-workflows` commit SHA. Central changes will be validated/canaried first, then propagated through Renovate-managed pin-update PRs instead of mutable `@main`, avoiding an immediate fleet-wide blast radius while retaining one centrally maintained implementation.
+
+The design reuses Auto-Live exact-target/reconciliation/concurrency/fail-closed primitives and keeps Simple LIVE for sensitive or exceptional operations. It does not permit `ops-workflows` to become a credential store, generic remote shell, privileged RPi5 runner or arbitrary production transaction engine.
+
+Planned migration sequence:
+
+1. shared SIMPLE-DEPLOY source/policy/workflow in `ops-workflows`;
+2. one generic trusted deployer in `RPi5_main`;
+3. `rozkalns_weather#142` as first canary;
+4. migrate Hermes Deals and other compatible Docker/Compose services;
+5. make SIMPLE-DEPLOY the default bootstrap for future compatible projects after at least two consumers prove reuse.
+
+This is **not active production policy yet**. Existing consumer repository-local deployment contracts remain authoritative until each consumer explicitly adopts the final shared contract and completes its reviewed cutover.
 
 ## AUTO-RUN FULL Queue v1
 

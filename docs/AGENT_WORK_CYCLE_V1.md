@@ -20,6 +20,16 @@ Provide one predictable operator interaction model across active repositories wh
 
 Repository-wide or multi-lane audits remain explicit audit work, not an implicit side effect of START/SYNC.
 
+## GitHub-first tool and transport priority
+
+GitHub is the default control, read and write surface whenever repository/source work can be completed through connected GitHub tooling with equivalent correctness and evidence. Do not use RDC, SSH, a local checkout, shell `git`, `gh`, or `curl` merely as a substitute for supported GitHub-native operations.
+
+Use RDC/host shell only for the smallest step that genuinely requires execution or observation on the RPi5/host and cannot be obtained through GitHub, such as host/runtime evidence, local filesystem/process state, `sudo`/root, systemd, Docker, packages, networking, mounts, permissions/ownership, or another command that must execute on that host.
+
+When a task spans both surfaces, use **GitHub -> minimal required RDC/host step -> GitHub**. Return to GitHub for canonical source, branches/commits/PRs, issues, CI/reviews and durable continuity/evidence. RDC is execution/transport only and never source-of-truth or authorization authority.
+
+Choosing RDC never widens owner-authorized mutation classes, targets, protected-data access, retry/rollback/cleanup authority, merge authority, repository-settings authority, or secrets/permissions authority. Repository-local stricter runtime and protected-data rules always win.
+
 ## Owner gates
 
 Safe source work should converge through implementation, tests, Draft PR, CI/review and Ready without artificial owner interruptions when local rules permit. Polling CI, inspecting exact-head state, read-only preflight and scope-preserving corrections are technical steps rather than owner decisions.
@@ -45,6 +55,6 @@ Every user-visible terminal/status response for repository work ends with exactl
 
 ## Rollout scope
 
-Active rollout repositories: `ops-workflows`, `hermes-deals`, `hermes-tech`, `rozkalns-cv`, `rozkalns-control-center`, `dashboard_RPi5`, `RPi5-maintenance`, `home-assistant-config`, `balcony-irrigation-esp32`. `RPi5_main` is the reference implementation.
+Active rollout repositories: `ops-workflows`, `RPi5_main`, `hermes-deals`, `hermes-tech`, `rozkalns-cv`, `rozkalns-control-center`, `dashboard_RPi5`, `RPi5-maintenance`, `home-assistant-config`, `balcony-irrigation-esp32`, `rozkalns_weather`, `linux-operations-lab`.
 
-Excluded from this rollout: `deploy-authorizations` (authorization ledger), `hermes-email-skill` (explicit automation-program exclusion), and `YouTube_Marcim` (unrelated private project). Repository-local stricter contracts always win.
+Excluded from this rollout: `deploy-authorizations` (authorization ledger), `hermes-email-skill` (explicit automation-program exclusion), `YouTube_Marcim` (unrelated private project), and the `rozkalnsandris` profile repository (profile-only metadata, not an engineering work repository). Repository-local stricter contracts always win.

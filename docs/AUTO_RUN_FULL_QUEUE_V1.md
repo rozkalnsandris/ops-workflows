@@ -5,13 +5,17 @@
 **Tracking issue:** `rozkalnsandris/ops-workflows#39`  
 **Machine contract:** `policy/auto-run-full-queue-v1.json`
 
+> **Future vNext notice:** issue `#96` records a later Queue evolution that is intentionally blocked until SIMPLE-DEPLOY is implemented, activated, canary-tested and proven across intended compatible consumers. That future mode is intended to let one explicit ordered queue activation progress normal `AUTO_DEPLOY_SAFE` items through source -> CI -> merge -> SIMPLE-DEPLOY -> receipt -> next item without another approval between successful items. This notice does **not** change current A1 authority, current machine invariants, or the final-owner-LIVE design described below. No queue-wide merge/LIVE authority exists until a later reviewed #96 contract is implemented and explicitly adopted.
+
+Canonical cross-platform sequencing: `docs/DELIVERY_PLATFORM_ROADMAP.md`.
+
 ## 1. Purpose
 
 AUTO-RUN FULL Queue v1 increases throughput without introducing concurrent source writers in one repository.
 
 The target operator experience is one explicitly scoped queue activation containing up to ten named issues. The controller processes exactly one issue at a time through the normal source/PR/CI/review/merge lifecycle, then advances to the next frozen issue automatically.
 
-The target end state is:
+The **current A1 design** target end state is:
 
 ```text
 frozen issue queue
@@ -196,11 +200,13 @@ After the final frozen issue is merged and exact-main verified, the controller m
 
 If no production/runtime mutation is required, the queue may finish `DONE` without asking for LIVE.
 
-If live mutation is required, the queue stops once at the final owner LIVE gate.
+Under the **current A1 design**, if live mutation is required, the queue stops once at the final owner LIVE gate.
+
+Issue `#96` may later replace this ordinary-release behavior for already-activated SIMPLE-DEPLOY `AUTO_DEPLOY_SAFE` consumers, but only after its future machine contract is implemented and adopted.
 
 ## 10. Simple LIVE — one decision, fixed reviewed rollout
 
-The preferred LIVE model is intentionally simpler than a generic transaction engine.
+The current A1 preferred LIVE model is intentionally simpler than a generic transaction engine.
 
 The owner approves one exact, already-reviewed rollout identity bound to:
 
@@ -302,7 +308,7 @@ A shared Queue/LIVE policy may coordinate a bounded handoff, but does not move p
 
 ## 14. Consumer adoption sequence
 
-Recommended migration sequence:
+The current A1 migration sequence remains:
 
 ```text
 1. merge shared Queue docs/policy/tests in ops-workflows
@@ -316,6 +322,8 @@ Recommended migration sequence:
 9. repeat one consumer at a time
 10. deprecate legacy AUTO-RUN FULL only after intended migrations are proven
 ```
+
+However, **platform priority has changed**: do not execute this Queue migration before SIMPLE-DEPLOY fleet rollout. `docs/DELIVERY_PLATFORM_ROADMAP.md` is authoritative for sequencing, and `#96` becomes the next Queue implementation lane only after SIMPLE-DEPLOY is stable/default.
 
 No consumer is migrated by inference.
 
@@ -331,3 +339,5 @@ A1 is complete when:
 - no consumer/runtime/LIVE mutation is introduced.
 
 Later implementation phases may add controller state, schemas, event resume, reusable guards, canary adoption and live acceptance. Those later phases must preserve the A1 compatibility boundary until explicit consumer migration.
+
+Future issue `#96` is the planned post-SIMPLE-DEPLOY vNext and must be treated as a separate later trust-boundary implementation, not as authority granted by this A1 document.

@@ -2,6 +2,48 @@
 
 This repository is the canonical shared GitHub-side automation and delivery-policy repository for `rozkalnsandris` projects.
 
+## Delivery platform sequencing
+
+Before changing shared deployment architecture, read:
+
+1. `docs/SIMPLE_DEPLOY_V1_PLAN.md` — accepted architecture plan;
+2. `docs/DELIVERY_PLATFORM_ROADMAP.md` — canonical implementation order and final-audit clarifications;
+3. issue `#97` — current shared SIMPLE-DEPLOY implementation work item;
+4. `rozkalnsandris/RPi5_main#666` — generic trusted runtime executor source;
+5. `rozkalnsandris/rozkalns_weather#142` — first consumer/canary;
+6. issue `#96` — post-fleet AUTO-RUN FULL Queue vNext, intentionally blocked until SIMPLE-DEPLOY is proven across intended consumers.
+
+Canonical order is:
+
+```text
+ops-workflows#97 shared SIMPLE-DEPLOY
+-> RPi5_main#666 generic pull deployer
+-> Weather#142 canary
+-> one explicit cutover LIVE gate
+-> prove Weather
+-> migrate/test compatible fleet
+-> declare SIMPLE-DEPLOY stable/default
+-> ONLY THEN ops-workflows#96 Queue vNext
+```
+
+Do not create another project-specific normal deployment framework while a consumer can fit the shared profile.
+
+SIMPLE-DEPLOY implementation invariants:
+
+- GitHub-side common build/publish/promotion logic lives here, not in each consumer;
+- public consumers use GitHub-hosted runners, not a normal privileged RPi5 self-hosted runner;
+- stable `production` tag/channel is discovery only; the immutable resolved GHCR digest is deployment identity;
+- `RPi5_main` owns one generic allowlisted outbound pull deployer and all privileged host execution;
+- consumer callers are tiny, pinned to immutable full `ops-workflows` SHAs, and follow the Renovate-compatible version comment/tag convention;
+- reusable workflow permissions are least-privilege and cannot be assumed to exceed caller-granted permissions;
+- `environment: production` must not silently add a manual reviewer gate to the baseline one-approval `AUTO_DEPLOY_SAFE` flow;
+- production concurrency has one deliberate shared owner; do not duplicate generic caller/called-workflow concurrency in a way that can self-cancel/deadlock;
+- ordinary deploy excludes DB/schema/data migration, destructive recovery, secrets/permissions, Cloudflare/network, private-provider activation and unrelated host-control work;
+- after one-time activation, ordinary `AUTO_DEPLOY_SAFE` releases should not require a fresh per-release LIVE owner decision;
+- sensitive/non-standard mutation classes remain separately exact-gated.
+
+Current `AUTO-RUN FULL Queue v1` / A1 documentation remains inactive source-policy design. Issue `#96` records a **future vNext** that will eventually permit one explicit ordered queue activation to progress normal items through source -> CI -> merge -> SIMPLE-DEPLOY -> receipt -> next item without another owner approval between successful items. Do not infer that future authority before #96 is implemented and adopted after fleet stability.
+
 ## FAST-LANE v2.2 Composite
 
 Before changing shared delivery policy, read all three canonical surfaces:
@@ -57,10 +99,11 @@ Rules:
 
 Shared design surfaces:
 
-1. `docs/AUTO_RUN_FULL_QUEUE_V1.md` — normative queue and Simple LIVE design;
+1. `docs/AUTO_RUN_FULL_QUEUE_V1.md` — normative current A1 Queue/Simple LIVE design;
 2. `policy/auto-run-full-queue-v1.json` — machine-readable A1 invariants;
 3. `.github/workflows/auto-run-full-queue-policy-gate.yml` — repository contract validation;
-4. issue #39 — design/migration tracking.
+4. issue `#39` — historical/current A1 design/migration tracking;
+5. issue `#96` — **future Queue vNext after SIMPLE-DEPLOY fleet rollout**, not current authority.
 
 **A1 is source-policy design only and is not an active consumer mode.**
 
@@ -71,9 +114,10 @@ Shared design surfaces:
 - Every queued item retains its own issue, branch, PR, exact-head CI/review, merge identity and exact-main verification.
 - A1 does not grant queue-wide source authority, queue-wide merge authority or LIVE authority.
 - A future batch source+merge authorization requires a separately reviewed machine contract before activation.
-- After all source items complete, perform final exact-main/read-only reconciliation and ask once for LIVE only when a live mutation is actually required.
-- Simple LIVE should bind exact SHA, target and a fixed reviewed consumer rollout identity rather than introduce a generic dynamic operation engine.
-- `ops-workflows` remains GitHub-side policy/guard infrastructure; consumer repositories own fixed rollout adapters/credentials and `RPi5_main` remains the trusted host/runtime boundary.
+- The current A1 design's final owner LIVE model remains unchanged until later explicit implementation/adoption.
+- After SIMPLE-DEPLOY is proven across the intended fleet, `#96` may reconcile Queue semantics so ordinary `AUTO_DEPLOY_SAFE` queued items can continue through shared SIMPLE-DEPLOY without another owner approval between normal successful items.
+- Sensitive/non-standard operations remain separately gated even under future Queue vNext.
+- `ops-workflows` remains GitHub-side policy/guard infrastructure; consumer repositories own application-specific configuration and `RPi5_main` remains the trusted host/runtime boundary.
 
 Repository-local stricter trust-boundary rules remain authoritative throughout migration.
 

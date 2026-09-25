@@ -28,7 +28,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m unittest -v tests.github_api_access.test_policy
+          python3 -m unittest -v \
+            tests.github_api_access.test_policy \
+            tests.github_api_access.test_mutation_boundary
 
       - name: Validate required contract surfaces
         shell: bash
@@ -41,6 +43,7 @@ jobs:
               Path('docs/GITHUB_API_ACCESS_V1.md'),
               Path('policy/github-api-access-v1.json'),
               Path('tests/github_api_access/test_policy.py'),
+              Path('tests/github_api_access/test_mutation_boundary.py'),
           ]
           for path in required:
               if not path.is_file() or path.stat().st_size == 0:

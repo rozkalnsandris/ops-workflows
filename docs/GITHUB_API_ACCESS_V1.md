@@ -2,11 +2,11 @@
 
 Status: ACTIVE shared governance contract  
 Canonical repository: `rozkalnsandris/ops-workflows`  
-Tracking: `ops-workflows#108`, contract slice `#109`, read-plan slice `#110`
+Tracking: `ops-workflows#108`, contract slice `#109`, read-plan slice `#110`, mutation-boundary slice `#111`
 
 ## Purpose
 
-Define one deterministic GitHub API access discipline for `START`, `SYNC`, `turpini`, AUTO-RUN FULL PR convergence, CI/review refresh, final pre-merge refresh, and exact-main reconciliation.
+Define one deterministic GitHub API access discipline for `START`, `SYNC`, `turpini`, AUTO-RUN FULL PR convergence, CI/review refresh, final pre-merge refresh, mutation dispatch, and exact-main reconciliation.
 
 The goal is to reduce primary/secondary rate-limit pressure without weakening canonical-state freshness, exact-head checks, owner gates, authorization consumption, or fail-closed behavior.
 
@@ -37,7 +37,7 @@ When GitHub changes documented limits or retry semantics, fresh GitHub documenta
 8. Use API-provided pagination semantics and explicit bounds. Never implement unbounded scans as part of a normal work-cycle refresh.
 9. GraphQL consolidation is allowed only when it reduces total request cost and stays bounded. Every connection must use `first` or `last` in the range 1–100 and queries must remain comfortably below GitHub's documented 500,000-node limit.
 10. Do not continuously poll `/rate_limit`; response headers and the triggering error are the preferred live evidence when available.
-11. Do not rotate tokens, accounts, IPs, or endpoints to evade quota enforcement.
+11. Do not rotate tokens, accounts, IPs, endpoints, or tools to evade quota enforcement.
 12. Repository-local stricter rules always win.
 
 ## Request-budget classes
@@ -46,50 +46,23 @@ These classes are qualitative control surfaces, not brittle fixed request counts
 
 ### `BOOTSTRAP_MINIMAL`
 
-Used by normal `START <repo>`.
-
-Retrieve only enough to identify one canonical current lane:
-
-- repository-local rules;
-- canonical handoff/continuation when present;
-- current default-branch SHA;
-- current issue/PR identity needed for the selected lane.
-
-Do not enumerate unrelated issues, PRs, workflow history, comments, or files by default.
+Used by normal `START <repo>`. Retrieve only enough to identify one canonical current lane: repository-local rules, canonical handoff/continuation when present, current default-branch SHA, and the current issue/PR identity required by that lane. Do not enumerate unrelated issues, PRs, workflow history, comments, files, or commits by default.
 
 ### `PR_REFRESH_COMPACT`
 
-Used while converging one active PR.
-
-Refresh only mutable evidence required for the current PR decision, normally:
-
-- exact PR head;
-- required checks/status;
-- reviews;
-- unresolved review threads;
-- mergeability/base state only when relevant to the current decision.
-
-Changed-file enumeration is on-demand, not part of every refresh.
+Used while converging one active PR. Refresh only mutable evidence required for the current PR decision: exact PR head, required checks/status, reviews, unresolved review threads, and mergeability/base state only when relevant.
 
 ### `FINAL_PREMERGE_COMPACT`
 
-Used immediately before an already-authorized merge/write.
-
-Refresh only operation-binding facts such as current main/base, exact head, mergeability, required exact-head CI, reviews, unresolved threads, and exact authority binding.
-
-This is not a repository-wide audit.
+Used immediately before an already-authorized merge/write. Refresh only operation-binding facts: current main/base, exact PR head, mergeability, required exact-head CI/status, reviews, unresolved threads, and exact authority binding. This is not a repository-wide audit.
 
 ### `EXACT_MAIN_MINIMAL`
 
-Used after a confirmed merge/write when repository policy requires reconciliation.
-
-Retrieve only the resulting current `main` identity and the minimum exact-main evidence required by repository rules. Broaden only if reconciliation fails or exposes drift.
+Used after a confirmed merge/write or when reconciling a previously ambiguous mutation that fresh GitHub state proves succeeded. Retrieve only the resulting current `main` identity and minimum exact-main lineage/evidence required by repository rules.
 
 ### `PR_FILES_ON_DEMAND`
 
-List/fetch changed files only when the current issue, diff review, test failure, or review thread requires file-level evidence.
-
-Do not repeatedly enumerate unchanged file lists during CI/review refresh.
+List/fetch changed files only when the current issue, diff review, test failure, or review thread requires file-level evidence. Do not repeatedly enumerate unchanged file lists during CI/review refresh.
 
 ### `DEEP_AUDIT_EXPLICIT`
 
@@ -97,11 +70,9 @@ Broader retrieval is permitted only under an explicit audit mode such as `AUDIT-
 
 ## Compact PR read plans
 
-The budget classes above map to explicit lane plans. These plans define the default read surface; a concrete failure, review finding, conflict, or repository-local stricter rule may require demand-driven expansion.
-
 ### Normal `START <repo>` when the selected lane is a PR
 
-After repository routing identifies the current PR, retrieve only the evidence needed to understand its current gate:
+Retrieve only:
 
 ```text
 repository rules / canonical continuation when needed
@@ -113,18 +84,9 @@ reviews
 unresolved review threads
 ```
 
-Do not fetch by default:
+Do not fetch by default unrelated issues/PRs, historical workflow runs, all changed files, all comments, all commits, or a repo-wide inventory.
 
-```text
-unrelated issues or PRs
-historical workflow runs
-all changed files
-all comments
-all commits
-repo-wide inventory
-```
-
-The PR identity/head and CI/review evidence may come from one aggregate connector operation when that operation returns the same required canonical facts. Do not split one sufficient response into several narrower duplicate reads merely for presentation convenience.
+When one aggregate connector operation already returns the same required canonical facts, prefer it over several narrower duplicate reads.
 
 ### Normal `SYNC <repo>` / `turpini` on an active PR
 
@@ -140,47 +102,26 @@ unresolved review threads
 
 Do not re-enumerate changed files, comments, commits, unrelated workflow history, or unrelated repository state unless the lane exposes a concrete reason to do so.
 
-Already-returned evidence may be reused inside the same bounded decision step while its identity is still exact. A later user continuation, event wakeup, head change, check completion, review change, or other meaningful state transition requires the appropriate fresh canonical refresh.
-
 ### File-level inspection
 
-Changed-file evidence is a separate on-demand lane:
-
-1. enumerate changed filenames only when file-level evidence is actually required;
-2. use one API-provided paginated listing for a stable PR head when that listing is sufficient;
-3. fetch patches only for the specific files that require inspection;
-4. do not re-fetch the unchanged file list during ordinary CI/review refresh.
-
-A PR existing is not itself a reason to enumerate every changed file.
+1. Enumerate changed filenames only when file-level evidence is actually required.
+2. Use one API-provided paginated listing for a stable PR head when that listing is sufficient.
+3. Fetch patches only for specific files that require inspection.
+4. Do not re-fetch the unchanged file list during ordinary CI/review refresh.
 
 ### CI/review refresh
 
-CI/review continuation is event/state driven by default:
-
-```text
-check/review state change, webhook/task wakeup, meaningful delay, or user continuation
--> refresh exact-head checks/reviews/threads
--> continue the same lane
-```
-
-Do not tight-loop on unchanged checks. Do not fetch unrelated historical workflow runs merely to determine the current exact-head state.
-
-When the connector exposes an aggregate typed operation that already returns the required exact-head evidence, prefer it over multiple calls that duplicate the same facts. When no such operation exists, use the smallest serial sequence that proves the gate.
+CI/review continuation is event/state/user-continuation driven by default. Do not tight-loop on unchanged checks and do not fetch unrelated historical workflow runs merely to determine current exact-head state.
 
 ### Explicit deep audit
 
-`AUDIT-HANDOFF` and other explicit repo-wide audits remain valid. They are not normal `START`/`SYNC` behavior and must be visibly treated as `DEEP_AUDIT_EXPLICIT`.
-
-Even an explicit audit must avoid duplicate reads, honor API pagination, and stop expanding once the requested audit question has sufficient evidence.
+`AUDIT-HANDOFF` and other explicit repo-wide audits remain valid but are not normal `START`/`SYNC` behavior. Even an explicit audit must avoid duplicate reads, honor API pagination, and stop expanding once the audit question has sufficient evidence.
 
 ## Connector capability honesty
 
-The contract describes preferred primitives, not fictional capabilities.
-
-- If a connector exposes `ETag`, `Last-Modified`, `If-None-Match`, or `If-Modified-Since`, use them where useful.
-- If it does not expose those headers, fall back to minimum-sufficient/event-driven retrieval; do not claim conditional caching occurred.
-- If GraphQL is unavailable, use bounded REST/typed connector operations; do not add a second transport solely to satisfy this contract.
-- If an aggregate typed connector operation returns equivalent canonical evidence, prefer it over custom GraphQL or several narrower duplicate calls.
+- Use conditional request headers only when the connector exposes them.
+- If GraphQL is unavailable, use bounded REST/typed connector operations.
+- Prefer an aggregate typed connector operation when it already returns equivalent canonical evidence.
 - Connector capability limitations never justify broader retrieval or weaker authority checks.
 
 ## Event-driven continuation
@@ -193,78 +134,113 @@ GitHub event / user continuation / meaningful state transition
 -> continue current lane
 ```
 
-Avoid:
-
-```text
-tight timer
--> same PR/check reads
--> same reads again
--> repeated unchanged polling burst
-```
-
-Webhook/event payloads are wake signals, not authority and not canonical state. A wakeup must still refresh the necessary GitHub facts before acting.
+Avoid tight timers that repeatedly read the same PR/check state. Webhook/event payloads are wake signals, not authority and not canonical state.
 
 ## Rate-limit evidence classification
 
-Use the following stable dispositions when the relevant evidence is available:
+Use these stable dispositions when supported by available evidence:
 
 - `PRIMARY_RATE_LIMIT_EXHAUSTED` — GitHub reports primary quota exhaustion, including `x-ratelimit-remaining: 0`.
 - `SECONDARY_RATE_LIMIT_SUSPECTED` — a `403`/`429` or documented secondary-limit response occurs without proof of primary exhaustion.
-- `RETRY_AFTER_REQUIRED` — a `Retry-After` value is present and defines the earliest safe read retry.
+- `RETRY_AFTER_REQUIRED` — `Retry-After` defines the earliest safe read retry.
 - `RESET_WAIT_REQUIRED` — primary remaining is zero and `x-ratelimit-reset` defines the earliest safe read retry.
-- `READ_BACKOFF_REQUIRED` — secondary-limit handling requires a delay/backoff before another read attempt.
-- `TRANSPORT_RATE_LIMIT_METADATA_UNAVAILABLE` — the connector/transport reports rate limiting but does not expose the relevant headers; do not invent values.
+- `READ_BACKOFF_REQUIRED` — secondary-limit handling requires delay/backoff before another read attempt.
+- `TRANSPORT_RATE_LIMIT_METADATA_UNAVAILABLE` — the connector reports rate limiting but does not expose relevant headers; do not invent values.
 
-GitHub does not expose a direct authoritative query for current secondary-limit state. Never claim exact secondary-limit remaining capacity when it is not provided.
+GitHub does not expose a direct authoritative query for current secondary-limit capacity.
 
 ## Read-path interruption
 
-A rate-limit/backoff disposition may pause or stop a read path before the desired audit is complete. That is a normal fail-closed outcome, not permission to fan out through alternate endpoints.
-
-A read-path interruption must not:
-
-- widen source, merge, LIVE, deploy, retry, rollback, cleanup, secrets, permission, or settings authority;
-- trigger an unrelated repo-wide scan merely to find equivalent evidence;
-- switch accounts/tokens/endpoints to bypass enforcement.
-
-Resume only under the applicable bounded read backoff and fresh canonical-state rules.
+A rate-limit/backoff disposition may pause or stop a read path before the desired audit is complete. It must not widen authority, trigger an unrelated repo-wide scan, or switch accounts/tokens/endpoints/tools to bypass enforcement.
 
 ## Pre-mutation read-only backoff
 
-These retry rules apply only before the first authorized mutation starts.
+These retry rules apply only before the first authorized mutation starts:
 
 1. If `Retry-After` is present, do not retry before that interval.
 2. Else if `x-ratelimit-remaining == 0`, do not retry before `x-ratelimit-reset`.
 3. Else for a secondary-limit response, wait at least 60 seconds before retrying.
 4. Repeated secondary-limit responses use bounded exponential backoff.
-5. The retry budget must remain compatible with a repository-local stricter technical-attempt limit; in this fleet, a `3 failed attempts -> STOP` rule may be stricter and therefore wins.
+5. Repository-local stricter attempt limits win; this fleet commonly uses `3 failed attempts -> STOP`.
 6. No busy loop, parallel alternate-endpoint probing, or quota-evasion behavior.
 
 A read retry never creates merge/write/LIVE authority.
 
+## Final pre-mutation gate
+
+Immediately before an already-authorized merge/write, perform one serial `FINAL_PREMERGE_COMPACT` refresh of only the mutable facts that bind the operation:
+
+```text
+current main/base
+exact PR head
+mergeability
+required exact-head CI/status
+reviews
+unresolved review threads
+exact owner/FULL authority binding
+```
+
+Do not perform a broad repository audit at this point. If the GitHub mutation operation supports an expected-head SHA, bind the mutation to the exact expected head. Head/base/authority drift rejects before dispatch rather than broadening or guessing.
+
+## Mutation outcome dispositions
+
+After mutation authority reaches the dispatch boundary, classify outcomes with these stable codes:
+
+```text
+MUTATION_CONFIRMED_SUCCESS
+MUTATION_CONFIRMED_REJECTED_BEFORE_APPLY
+MUTATION_OUTCOME_UNKNOWN_RATE_LIMIT
+MUTATION_OUTCOME_UNKNOWN_TIMEOUT
+MUTATION_OUTCOME_UNKNOWN_TRANSPORT
+POST_MUTATION_RECONCILIATION_REQUIRED
+```
+
+`MUTATION_CONFIRMED_REJECTED_BEFORE_APPLY` is valid only when available evidence positively proves that the mutation was rejected before it could apply. A `429`, timeout, malformed/partial response, connector disconnect, or transport failure after dispatch does not prove that the server failed to apply the mutation.
+
 ## Mutation boundary
 
-This v1 access contract distinguishes read retry from mutation retry authority.
+Once an authorized mutation call is dispatched/started:
 
-Once an authorized mutation is dispatched/started:
+- authorization is consumed according to repository-local policy;
+- no automatic second merge/write call is permitted;
+- `403`, `429`, timeout, transport disconnect, malformed/partial response, or uncertain completion is fail-closed unless evidence positively proves rejection before apply;
+- `429` must never be interpreted as proof that the mutation did not apply;
+- do not switch endpoints, tools, accounts, or tokens to try the mutation again;
+- do not rollback, cleanup, rebase, reset, or choose an alternate mutation path merely to recover the lane;
+- merge success never implies LIVE/deploy authority.
 
-- authorization consumption is governed by repository-local policy;
-- a `403`, `429`, timeout, transport failure, malformed response, or uncertain completion state must not trigger an automatic duplicate mutation;
-- gather only the minimum permitted read-only evidence needed to preserve/reconcile state;
-- STOP when the repository's fail-closed rule requires it;
-- any later retry of the mutation requires authority from the applicable repository contract.
+An ambiguous rate-limit response after dispatch is `MUTATION_OUTCOME_UNKNOWN_RATE_LIMIT`; timeout is `MUTATION_OUTCOME_UNKNOWN_TIMEOUT`; other transport uncertainty is `MUTATION_OUTCOME_UNKNOWN_TRANSPORT`. Each requires fail-closed reconciliation, not automatic retry.
 
-Detailed mutation-outcome reason codes and reconciliation are implemented by follow-up slice `ops-workflows#111`; this contract already forbids rate-limit handling from creating implicit mutation retry authority.
+## Post-mutation reconciliation
+
+After ambiguity, the same run may gather only the minimum permitted read-only evidence needed to preserve state, normally current PR merged state and current `main`. It must still STOP and must not issue another mutation.
+
+If rate limiting prevents even that minimum evidence, preserve what is already known and STOP without further probing.
+
+The next `SYNC <repo>` or explicitly authorized continuation must freshly read canonical GitHub state:
+
+- if the exact expected PR head is proven merged and resulting main lineage is correct, reconcile as `MUTATION_CONFIRMED_SUCCESS`; do not merge again;
+- if fresh state proves the mutation did not occur, consumed authorization does not revive silently; a new explicit merge/write authority is required unless a repository-local contract had already pre-authorized a bounded retry;
+- if state remains ambiguous or drifted, remain STOPPED.
+
+After a clearly confirmed merge response, use only `EXACT_MAIN_MINIMAL`. Do not immediately launch a full PR/files/comments/check-history audit burst. Broaden only when exact-main verification fails or exposes drift.
+
+## Deterministic mutation scenarios
+
+The machine policy records synthetic acceptance scenarios rather than intentionally exhausting GitHub quotas:
+
+- exact-head guarded success -> confirmed success, no duplicate mutation, then `EXACT_MAIN_MINIMAL`;
+- head drift before dispatch -> rejected before apply, no mutation;
+- primary rate limit before dispatch -> bounded read backoff may apply;
+- `429` after dispatch -> unknown rate-limit outcome, no duplicate mutation;
+- timeout after dispatch -> unknown timeout outcome, no duplicate mutation;
+- transport error after dispatch -> unknown transport outcome, no duplicate mutation;
+- next SYNC proves applied -> reconciled success, no second mutation;
+- next SYNC proves not applied -> fresh authority required.
 
 ## GraphQL and REST bounds
 
-GraphQL is an optimization, not a requirement.
-
-Use it only when the available integration can reduce call count without hiding important state boundaries. Request only required fields, use cursor pagination, keep every connection `first`/`last` within 1–100, and avoid giant deeply nested PR/files/comments/reviews/checks queries.
-
-When typed connector operations already aggregate the required evidence, prefer them rather than adding a second custom GraphQL layer without a demonstrated benefit.
-
-REST list operations must follow returned pagination links/cursors or equivalent API-provided pagination semantics and stop when the current lane has sufficient evidence.
+GraphQL is an optimization, not a requirement. Use it only when available and lower-cost, request only required fields, use cursor pagination, keep every connection `first`/`last` within 1–100, and avoid giant nested queries. REST list operations must follow API-provided pagination and stop once the current lane has sufficient evidence.
 
 ## Compatibility and authority
 

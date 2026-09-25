@@ -43,6 +43,11 @@ class GitHubApiAccessPolicyTests(unittest.TestCase):
         access = self.policy["access"]
         self.assertTrue(access["conditional_requests_when_transport_supports"])
         self.assertFalse(access["pretend_conditional_support_when_unavailable"])
+        capabilities = self.policy["connector_capabilities"]
+        self.assertTrue(capabilities["conditional_request_headers_may_be_unavailable"])
+        self.assertTrue(capabilities["graphql_may_be_unavailable"])
+        self.assertTrue(capabilities["typed_aggregate_operations_preferred_when_equivalent"])
+        self.assertTrue(capabilities["must_not_invent_unexposed_capability"])
 
     def test_request_budget_classes_are_stable(self):
         self.assertEqual(
@@ -56,6 +61,58 @@ class GitHubApiAccessPolicyTests(unittest.TestCase):
             ],
             self.policy["request_budget_classes"],
         )
+
+    def test_start_pr_plan_is_minimum_sufficient(self):
+        plan = self.policy["lane_read_plans"]["START_PR"]
+        self.assertEqual("BOOTSTRAP_MINIMAL", plan["budget_class"])
+        self.assertEqual(
+            {
+                "REPOSITORY_RULES",
+                "CANONICAL_CONTINUATION_WHEN_NEEDED",
+                "CURRENT_MAIN_SHA",
+                "CURRENT_ISSUE_OR_PR_IDENTITY",
+                "EXACT_PR_HEAD",
+                "REQUIRED_CHECKS_OR_STATUS",
+                "REVIEWS",
+                "UNRESOLVED_REVIEW_THREADS",
+            },
+            set(plan["facts"]),
+        )
+        self.assertIn("REPO_WIDE_INVENTORY", plan["default_exclusions"])
+        self.assertIn("HISTORICAL_WORKFLOW_RUNS", plan["default_exclusions"])
+        self.assertIn("ALL_CHANGED_FILES", plan["default_exclusions"])
+
+    def test_sync_refreshes_selected_lane_only(self):
+        plan = self.policy["lane_read_plans"]["SYNC_OR_CONTINUE_PR"]
+        self.assertEqual("PR_REFRESH_COMPACT", plan["budget_class"])
+        self.assertTrue(plan["refresh_selected_lane_only"])
+        self.assertFalse(plan["historical_workflow_runs_by_default"])
+        self.assertFalse(plan["comments_by_default"])
+        self.assertFalse(plan["changed_files_by_default"])
+
+    def test_pr_file_enumeration_is_on_demand(self):
+        plan = self.policy["lane_read_plans"]["PR_FILES"]
+        self.assertEqual("PR_FILES_ON_DEMAND", plan["budget_class"])
+        self.assertTrue(plan["enumerate_only_when_file_level_evidence_is_required"])
+        self.assertTrue(plan["one_paginated_listing_per_stable_head_when_sufficient"])
+        self.assertTrue(plan["fetch_per_file_patch_only_when_needed"])
+        self.assertFalse(plan["refetch_unchanged_file_list_during_ci_review_refresh"])
+
+    def test_ci_review_refresh_avoids_burst_polling_and_history(self):
+        refresh = self.policy["ci_review_refresh"]
+        self.assertTrue(refresh["event_state_transition_or_user_continuation_preferred"])
+        self.assertFalse(refresh["tight_loop_allowed"])
+        self.assertTrue(refresh["exact_head_evidence_only_by_default"])
+        self.assertFalse(refresh["unrelated_historical_runs_by_default"])
+        self.assertTrue(refresh["prefer_aggregate_connector_operation_when_equivalent"])
+        self.assertTrue(refresh["reuse_same_state_response_when_sufficient"])
+
+    def test_explicit_deep_audit_remains_available_and_bounded(self):
+        plan = self.policy["lane_read_plans"]["DEEP_AUDIT"]
+        self.assertEqual("DEEP_AUDIT_EXPLICIT", plan["budget_class"])
+        self.assertTrue(plan["explicit_mode_required"])
+        self.assertTrue(plan["duplicate_reads_still_forbidden"])
+        self.assertTrue(plan["pagination_must_remain_bounded"])
 
     def test_graphql_is_bounded(self):
         graphql = self.policy["graphql"]
@@ -90,6 +147,12 @@ class GitHubApiAccessPolicyTests(unittest.TestCase):
         self.assertFalse(backoff["parallel_alternate_endpoint_probe_allowed"])
         self.assertTrue(backoff["must_obey_repo_local_stricter_attempt_limit"])
 
+    def test_rate_limit_can_interrupt_read_path_without_widening_authority(self):
+        interrupt = self.policy["read_path_interrupt"]
+        self.assertTrue(interrupt["rate_limit_or_backoff_may_pause_or_stop_read_path"])
+        self.assertFalse(interrupt["interruption_may_widen_authority"])
+        self.assertFalse(interrupt["interruption_may_trigger_unrelated_state_scan"])
+
     def test_no_automatic_mutation_retry_authority(self):
         boundary = self.policy["mutation_boundary"]
         for key in (
@@ -119,8 +182,11 @@ class GitHubApiAccessPolicyTests(unittest.TestCase):
         for marker in (
             "## Core rules",
             "## Request-budget classes",
+            "## Compact PR read plans",
+            "## Connector capability honesty",
             "## Event-driven continuation",
             "## Rate-limit evidence classification",
+            "## Read-path interruption",
             "## Pre-mutation read-only backoff",
             "## Mutation boundary",
             "## GraphQL and REST bounds",
@@ -128,10 +194,14 @@ class GitHubApiAccessPolicyTests(unittest.TestCase):
         ):
             self.assertIn(marker, self.doc)
 
-    def test_active_work_cycle_points_to_contract(self):
+    def test_active_work_cycle_points_to_contract_and_compact_pr_refresh(self):
         marker = "docs/GITHUB_API_ACCESS_V1.md"
         self.assertIn(marker, self.agent_work_cycle)
         self.assertIn(marker, self.agents)
+        for text in (self.agent_work_cycle, self.agents):
+            self.assertIn("changed-file", text)
+            self.assertIn("historical workflow", text)
+            self.assertIn("aggregate", text)
 
 
 if __name__ == "__main__":

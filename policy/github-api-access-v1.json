@@ -5,7 +5,8 @@
   "tracking": {
     "umbrella_issue": 108,
     "contract_issue": 109,
-    "read_plan_issue": 110
+    "read_plan_issue": 110,
+    "mutation_boundary_issue": 111
   },
   "authority": {
     "github_is_canonical_mutable_state_source": true,
@@ -138,14 +139,102 @@
     "interruption_may_widen_authority": false,
     "interruption_may_trigger_unrelated_state_scan": false
   },
+  "mutation_outcome_dispositions": [
+    "MUTATION_CONFIRMED_SUCCESS",
+    "MUTATION_CONFIRMED_REJECTED_BEFORE_APPLY",
+    "MUTATION_OUTCOME_UNKNOWN_RATE_LIMIT",
+    "MUTATION_OUTCOME_UNKNOWN_TIMEOUT",
+    "MUTATION_OUTCOME_UNKNOWN_TRANSPORT",
+    "POST_MUTATION_RECONCILIATION_REQUIRED"
+  ],
   "mutation_boundary": {
+    "final_pre_mutation_budget_class": "FINAL_PREMERGE_COMPACT",
+    "final_pre_mutation_facts": [
+      "CURRENT_MAIN_OR_BASE",
+      "EXACT_PR_HEAD",
+      "MERGEABILITY",
+      "REQUIRED_EXACT_HEAD_CI_OR_STATUS",
+      "REVIEWS",
+      "UNRESOLVED_REVIEW_THREADS",
+      "EXACT_AUTHORITY_BINDING"
+    ],
+    "broad_repo_audit_before_mutation_allowed": false,
+    "expected_head_binding_required_when_supported": true,
+    "authorization_consumed_when_mutation_dispatched": true,
     "automatic_duplicate_mutation_after_403": false,
     "automatic_duplicate_mutation_after_429": false,
     "automatic_duplicate_mutation_after_timeout": false,
     "automatic_duplicate_mutation_after_transport_error": false,
+    "automatic_duplicate_mutation_after_malformed_or_partial_response": false,
     "rate_limit_handling_may_create_mutation_authority": false,
     "post_dispatch_uncertainty_fail_closed": true,
-    "minimal_read_only_reconciliation_only": true
+    "http_429_proves_mutation_not_applied": false,
+    "alternate_endpoint_or_tool_retry_after_dispatch_allowed": false,
+    "rollback_cleanup_rebase_reset_after_ambiguity_allowed": false,
+    "minimal_read_only_reconciliation_only": true,
+    "stop_after_ambiguous_outcome": true,
+    "merge_success_implies_live_or_deploy_authority": false
+  },
+  "post_mutation_reconciliation": {
+    "same_run_read_only_evidence_when_permitted": [
+      "PR_MERGED_STATE",
+      "CURRENT_MAIN_SHA"
+    ],
+    "rate_limit_blocks_evidence_then_stop_without_probe": true,
+    "next_sync_requires_fresh_canonical_reconciliation": true,
+    "expected_head_merged_and_lineage_correct": "MUTATION_CONFIRMED_SUCCESS",
+    "expected_head_not_merged_consumed_authority_revives": false,
+    "expected_head_not_merged_requires_fresh_authority": true,
+    "ambiguous_or_drifted_state_remains_stopped": true,
+    "confirmed_success_budget_class": "EXACT_MAIN_MINIMAL",
+    "confirmed_success_deep_audit_by_default": false,
+    "deeper_retrieval_only_on_verification_failure_or_drift": true
+  },
+  "mutation_scenarios": {
+    "EXACT_HEAD_GUARDED_SUCCESS": {
+      "mutation_dispatched": true,
+      "disposition": "MUTATION_CONFIRMED_SUCCESS",
+      "automatic_duplicate_mutation_allowed": false,
+      "post_result_budget_class": "EXACT_MAIN_MINIMAL"
+    },
+    "HEAD_DRIFT_PRE_DISPATCH": {
+      "mutation_dispatched": false,
+      "disposition": "MUTATION_CONFIRMED_REJECTED_BEFORE_APPLY",
+      "automatic_duplicate_mutation_allowed": false
+    },
+    "PRIMARY_RATE_LIMIT_PRE_DISPATCH": {
+      "mutation_dispatched": false,
+      "read_backoff_may_apply": true,
+      "automatic_duplicate_mutation_allowed": false
+    },
+    "HTTP_429_POST_DISPATCH": {
+      "mutation_dispatched": true,
+      "disposition": "MUTATION_OUTCOME_UNKNOWN_RATE_LIMIT",
+      "automatic_duplicate_mutation_allowed": false,
+      "requires_reconciliation": true
+    },
+    "TIMEOUT_POST_DISPATCH": {
+      "mutation_dispatched": true,
+      "disposition": "MUTATION_OUTCOME_UNKNOWN_TIMEOUT",
+      "automatic_duplicate_mutation_allowed": false,
+      "requires_reconciliation": true
+    },
+    "TRANSPORT_ERROR_POST_DISPATCH": {
+      "mutation_dispatched": true,
+      "disposition": "MUTATION_OUTCOME_UNKNOWN_TRANSPORT",
+      "automatic_duplicate_mutation_allowed": false,
+      "requires_reconciliation": true
+    },
+    "NEXT_SYNC_PROVES_APPLIED": {
+      "disposition": "MUTATION_CONFIRMED_SUCCESS",
+      "automatic_duplicate_mutation_allowed": false,
+      "fresh_authority_required": false
+    },
+    "NEXT_SYNC_PROVES_NOT_APPLIED": {
+      "disposition": "POST_MUTATION_RECONCILIATION_REQUIRED",
+      "automatic_duplicate_mutation_allowed": false,
+      "fresh_authority_required": true
+    }
   },
   "forbidden_evasion": [
     "TOKEN_ROTATION_FOR_QUOTA_EVASION",

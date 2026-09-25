@@ -4,7 +4,8 @@
   "canonical_repository": "rozkalnsandris/ops-workflows",
   "tracking": {
     "umbrella_issue": 108,
-    "implementation_issue": 109
+    "contract_issue": 109,
+    "read_plan_issue": 110
   },
   "authority": {
     "github_is_canonical_mutable_state_source": true,
@@ -36,6 +37,70 @@
     "EXACT_MAIN_MINIMAL",
     "DEEP_AUDIT_EXPLICIT"
   ],
+  "lane_read_plans": {
+    "START_PR": {
+      "budget_class": "BOOTSTRAP_MINIMAL",
+      "facts": [
+        "REPOSITORY_RULES",
+        "CANONICAL_CONTINUATION_WHEN_NEEDED",
+        "CURRENT_MAIN_SHA",
+        "CURRENT_ISSUE_OR_PR_IDENTITY",
+        "EXACT_PR_HEAD",
+        "REQUIRED_CHECKS_OR_STATUS",
+        "REVIEWS",
+        "UNRESOLVED_REVIEW_THREADS"
+      ],
+      "default_exclusions": [
+        "UNRELATED_ISSUES_OR_PRS",
+        "HISTORICAL_WORKFLOW_RUNS",
+        "ALL_CHANGED_FILES",
+        "ALL_COMMENTS",
+        "ALL_COMMITS",
+        "REPO_WIDE_INVENTORY"
+      ]
+    },
+    "SYNC_OR_CONTINUE_PR": {
+      "budget_class": "PR_REFRESH_COMPACT",
+      "facts": [
+        "CURRENT_MAIN_SHA_WHEN_RELEVANT",
+        "EXACT_PR_HEAD",
+        "REQUIRED_CHECKS_OR_STATUS",
+        "REVIEWS",
+        "UNRESOLVED_REVIEW_THREADS"
+      ],
+      "refresh_selected_lane_only": true,
+      "historical_workflow_runs_by_default": false,
+      "comments_by_default": false,
+      "changed_files_by_default": false
+    },
+    "PR_FILES": {
+      "budget_class": "PR_FILES_ON_DEMAND",
+      "enumerate_only_when_file_level_evidence_is_required": true,
+      "one_paginated_listing_per_stable_head_when_sufficient": true,
+      "fetch_per_file_patch_only_when_needed": true,
+      "refetch_unchanged_file_list_during_ci_review_refresh": false
+    },
+    "DEEP_AUDIT": {
+      "budget_class": "DEEP_AUDIT_EXPLICIT",
+      "explicit_mode_required": true,
+      "duplicate_reads_still_forbidden": true,
+      "pagination_must_remain_bounded": true
+    }
+  },
+  "ci_review_refresh": {
+    "event_state_transition_or_user_continuation_preferred": true,
+    "tight_loop_allowed": false,
+    "exact_head_evidence_only_by_default": true,
+    "unrelated_historical_runs_by_default": false,
+    "prefer_aggregate_connector_operation_when_equivalent": true,
+    "reuse_same_state_response_when_sufficient": true
+  },
+  "connector_capabilities": {
+    "conditional_request_headers_may_be_unavailable": true,
+    "graphql_may_be_unavailable": true,
+    "typed_aggregate_operations_preferred_when_equivalent": true,
+    "must_not_invent_unexposed_capability": true
+  },
   "pagination": {
     "api_provided_pagination_required": true,
     "unbounded_normal_lane_scan_allowed": false
@@ -67,6 +132,11 @@
     "busy_loop_allowed": false,
     "parallel_alternate_endpoint_probe_allowed": false,
     "must_obey_repo_local_stricter_attempt_limit": true
+  },
+  "read_path_interrupt": {
+    "rate_limit_or_backoff_may_pause_or_stop_read_path": true,
+    "interruption_may_widen_authority": false,
+    "interruption_may_trigger_unrelated_state_scan": false
   },
   "mutation_boundary": {
     "automatic_duplicate_mutation_after_403": false,

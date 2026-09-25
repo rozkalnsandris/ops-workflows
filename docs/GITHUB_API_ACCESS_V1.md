@@ -2,7 +2,7 @@
 
 Status: ACTIVE shared governance contract  
 Canonical repository: `rozkalnsandris/ops-workflows`  
-Tracking: `ops-workflows#108`, implementation slice `#109`
+Tracking: `ops-workflows#108`, contract slice `#109`, read-plan slice `#110`
 
 ## Purpose
 
@@ -95,6 +95,94 @@ Do not repeatedly enumerate unchanged file lists during CI/review refresh.
 
 Broader retrieval is permitted only under an explicit audit mode such as `AUDIT-HANDOFF` or when a concrete failure/conflict requires deeper evidence. Even then, avoid duplicate reads and bound pagination.
 
+## Compact PR read plans
+
+The budget classes above map to explicit lane plans. These plans define the default read surface; a concrete failure, review finding, conflict, or repository-local stricter rule may require demand-driven expansion.
+
+### Normal `START <repo>` when the selected lane is a PR
+
+After repository routing identifies the current PR, retrieve only the evidence needed to understand its current gate:
+
+```text
+repository rules / canonical continuation when needed
+current main SHA
+current issue / PR identity
+exact PR head
+required checks or status
+reviews
+unresolved review threads
+```
+
+Do not fetch by default:
+
+```text
+unrelated issues or PRs
+historical workflow runs
+all changed files
+all comments
+all commits
+repo-wide inventory
+```
+
+The PR identity/head and CI/review evidence may come from one aggregate connector operation when that operation returns the same required canonical facts. Do not split one sufficient response into several narrower duplicate reads merely for presentation convenience.
+
+### Normal `SYNC <repo>` / `turpini` on an active PR
+
+Refresh the selected lane only:
+
+```text
+current main when relevant to the gate
+exact current PR head
+required exact-head checks/status
+reviews
+unresolved review threads
+```
+
+Do not re-enumerate changed files, comments, commits, unrelated workflow history, or unrelated repository state unless the lane exposes a concrete reason to do so.
+
+Already-returned evidence may be reused inside the same bounded decision step while its identity is still exact. A later user continuation, event wakeup, head change, check completion, review change, or other meaningful state transition requires the appropriate fresh canonical refresh.
+
+### File-level inspection
+
+Changed-file evidence is a separate on-demand lane:
+
+1. enumerate changed filenames only when file-level evidence is actually required;
+2. use one API-provided paginated listing for a stable PR head when that listing is sufficient;
+3. fetch patches only for the specific files that require inspection;
+4. do not re-fetch the unchanged file list during ordinary CI/review refresh.
+
+A PR existing is not itself a reason to enumerate every changed file.
+
+### CI/review refresh
+
+CI/review continuation is event/state driven by default:
+
+```text
+check/review state change, webhook/task wakeup, meaningful delay, or user continuation
+-> refresh exact-head checks/reviews/threads
+-> continue the same lane
+```
+
+Do not tight-loop on unchanged checks. Do not fetch unrelated historical workflow runs merely to determine the current exact-head state.
+
+When the connector exposes an aggregate typed operation that already returns the required exact-head evidence, prefer it over multiple calls that duplicate the same facts. When no such operation exists, use the smallest serial sequence that proves the gate.
+
+### Explicit deep audit
+
+`AUDIT-HANDOFF` and other explicit repo-wide audits remain valid. They are not normal `START`/`SYNC` behavior and must be visibly treated as `DEEP_AUDIT_EXPLICIT`.
+
+Even an explicit audit must avoid duplicate reads, honor API pagination, and stop expanding once the requested audit question has sufficient evidence.
+
+## Connector capability honesty
+
+The contract describes preferred primitives, not fictional capabilities.
+
+- If a connector exposes `ETag`, `Last-Modified`, `If-None-Match`, or `If-Modified-Since`, use them where useful.
+- If it does not expose those headers, fall back to minimum-sufficient/event-driven retrieval; do not claim conditional caching occurred.
+- If GraphQL is unavailable, use bounded REST/typed connector operations; do not add a second transport solely to satisfy this contract.
+- If an aggregate typed connector operation returns equivalent canonical evidence, prefer it over custom GraphQL or several narrower duplicate calls.
+- Connector capability limitations never justify broader retrieval or weaker authority checks.
+
 ## Event-driven continuation
 
 Preferred model:
@@ -128,6 +216,18 @@ Use the following stable dispositions when the relevant evidence is available:
 - `TRANSPORT_RATE_LIMIT_METADATA_UNAVAILABLE` — the connector/transport reports rate limiting but does not expose the relevant headers; do not invent values.
 
 GitHub does not expose a direct authoritative query for current secondary-limit state. Never claim exact secondary-limit remaining capacity when it is not provided.
+
+## Read-path interruption
+
+A rate-limit/backoff disposition may pause or stop a read path before the desired audit is complete. That is a normal fail-closed outcome, not permission to fan out through alternate endpoints.
+
+A read-path interruption must not:
+
+- widen source, merge, LIVE, deploy, retry, rollback, cleanup, secrets, permission, or settings authority;
+- trigger an unrelated repo-wide scan merely to find equivalent evidence;
+- switch accounts/tokens/endpoints to bypass enforcement.
+
+Resume only under the applicable bounded read backoff and fresh canonical-state rules.
 
 ## Pre-mutation read-only backoff
 

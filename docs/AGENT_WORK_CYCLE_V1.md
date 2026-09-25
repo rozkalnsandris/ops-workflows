@@ -36,6 +36,10 @@ Shared access contract: `docs/GITHUB_API_ACCESS_V1.md` with machine invariants i
 
 Normal work-cycle retrieval is serial and minimum-sufficient by default. Prefer event/state-driven continuation over tight polling, use conditional requests only when the active transport exposes them, keep pagination and GraphQL bounded, and reuse already-returned evidence within the same decision step when sufficient.
 
+For an active PR, normal `START`/`SYNC`/`turpini` reads stay on the selected lane: current main when relevant, exact PR head, required checks/status, reviews and unresolved threads. Changed-file enumeration is on-demand only, unrelated historical workflow runs/comments/commits are not fetched by default, and an aggregate connector operation is preferred when it already returns the same required canonical evidence. Explicit `AUDIT-HANDOFF` or a concrete failure/conflict may broaden retrieval, but normal convergence does not.
+
+CI/review refresh is event/state/user-continuation driven rather than a tight loop. Do not repeatedly fetch an unchanged file list or unrelated historical workflow state while waiting for exact-head CI/review changes.
+
 Before any mutation, rate-limit responses may trigger only the bounded read-only backoff allowed by the shared contract and repository-local stricter attempt limits. Rate-limit handling never creates merge/write authority. After an authorized mutation is dispatched/started, `403`, `429`, timeout, transport failure, or uncertain completion must not cause an automatic duplicate mutation; preserve/reconcile only the minimum permitted evidence and fail closed under repository-local rules.
 
 ## Owner gates

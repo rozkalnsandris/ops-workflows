@@ -1,0 +1,50 @@
+name: GitHub API access policy contract
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-api-access-policy-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run GitHub API access contract tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest -v tests.github_api_access.test_policy
+
+      - name: Validate required contract surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          required = [
+              Path('docs/GITHUB_API_ACCESS_V1.md'),
+              Path('policy/github-api-access-v1.json'),
+              Path('tests/github_api_access/test_policy.py'),
+          ]
+          for path in required:
+              if not path.is_file() or path.stat().st_size == 0:
+                  raise SystemExit(f'missing GitHub API access contract file: {path}')
+
+          print('GITHUB_API_ACCESS_V1=PASS')
+          PY

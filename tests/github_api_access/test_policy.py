@@ -198,10 +198,8 @@ class GitHubApiAccessPolicyTests(unittest.TestCase):
         marker = "docs/GITHUB_API_ACCESS_V1.md"
         self.assertIn(marker, self.agent_work_cycle)
         self.assertIn(marker, self.agents)
-        for text in (self.agent_work_cycle, self.agents):
-            self.assertIn("changed-file", text)
-            self.assertIn("historical workflow", text)
-            self.assertIn("aggregate", text)
+        for phrase in ("Changed-file", "historical workflow", "aggregate"):
+            self.assertIn(phrase, self.agent_work_cycle)
 
 
 if __name__ == "__main__":

@@ -30,6 +30,14 @@ When a task spans both surfaces, use **GitHub -> minimal required RDC/host step 
 
 Choosing RDC never widens owner-authorized mutation classes, targets, protected-data access, retry/rollback/cleanup authority, merge authority, repository-settings authority, or secrets/permissions authority. Repository-local stricter runtime and protected-data rules always win.
 
+## GitHub API access and rate-limit discipline
+
+Shared access contract: `docs/GITHUB_API_ACCESS_V1.md` with machine invariants in `policy/github-api-access-v1.json`.
+
+Normal work-cycle retrieval is serial and minimum-sufficient by default. Prefer event/state-driven continuation over tight polling, use conditional requests only when the active transport exposes them, keep pagination and GraphQL bounded, and reuse already-returned evidence within the same decision step when sufficient.
+
+Before any mutation, rate-limit responses may trigger only the bounded read-only backoff allowed by the shared contract and repository-local stricter attempt limits. Rate-limit handling never creates merge/write authority. After an authorized mutation is dispatched/started, `403`, `429`, timeout, transport failure, or uncertain completion must not cause an automatic duplicate mutation; preserve/reconcile only the minimum permitted evidence and fail closed under repository-local rules.
+
 ## Owner gates
 
 Safe source work should converge through implementation, tests, Draft PR, CI/review and Ready without artificial owner interruptions when local rules permit. Polling CI, inspecting exact-head state, read-only preflight and scope-preserving corrections are technical steps rather than owner decisions.

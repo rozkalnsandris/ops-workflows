@@ -160,6 +160,8 @@ Shared workflows must be fail-closed, least-privilege, deterministic, and safe f
 
 Shared governance contract: `rozkalnsandris/ops-workflows/docs/AGENT_WORK_CYCLE_V1.md` with machine invariants in `policy/agent-work-cycle-v1.json`. Repository-local rules remain authoritative and may be stricter.
 
+Shared GitHub API access contract: `docs/GITHUB_API_ACCESS_V1.md` with machine invariants in `policy/github-api-access-v1.json`. Normal GitHub retrieval is serial and minimum-sufficient by default; rate-limit handling never creates mutation retry authority.
+
 ### Canonical state and minimum-sufficient retrieval
 
 - GitHub is canonical for mutable source, branch, SHA, issue/PR, CI/review and authorization-continuity state. Never reuse mutable state from chat history without a fresh read.

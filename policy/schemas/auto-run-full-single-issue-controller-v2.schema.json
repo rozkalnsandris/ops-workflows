@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rozkalnsandris/ops-workflows/policy/schemas/auto-run-full-single-issue-controller-v2.schema.json",
+  "title": "AUTO-RUN FULL single-issue minimal controller v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "repository",
+    "state",
+    "active_issue",
+    "active_run_id",
+    "active_run_digest_sha256",
+    "last_transition_id"
+  ],
+  "properties": {
+    "schema": {
+      "const": "rozkalns.auto-run-full-single-issue-controller.v2"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "state": {
+      "enum": [
+        "IDLE",
+        "ACTIVE",
+        "STOPPED"
+      ]
+    },
+    "active_issue": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "active_run_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "active_run_digest_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "last_transition_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Za-z0-9_.:-]{1,128}$"
+    }
+  }
+}

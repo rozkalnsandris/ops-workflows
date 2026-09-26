@@ -1,0 +1,65 @@
+name: BOOTSTRAP_MANIFEST v1 policy gate
+
+on:
+  pull_request:
+    paths:
+      - ".github/agent-bootstrap.json"
+      - ".github/workflows/bootstrap-manifest-policy-gate.yml"
+      - "docs/BOOTSTRAP_MANIFEST_V1.md"
+      - "docs/AGENT_WORK_CYCLE_V1.md"
+      - "docs/GITHUB_API_ACCESS_V1.md"
+      - "policy/agent-bootstrap-v1.json"
+      - "policy/schemas/agent-bootstrap-v1.schema.json"
+      - "scripts/agent_bootstrap_manifest.py"
+      - "tests/start_bootstrap/**"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/agent-bootstrap.json"
+      - ".github/workflows/bootstrap-manifest-policy-gate.yml"
+      - "docs/BOOTSTRAP_MANIFEST_V1.md"
+      - "docs/AGENT_WORK_CYCLE_V1.md"
+      - "docs/GITHUB_API_ACCESS_V1.md"
+      - "policy/agent-bootstrap-v1.json"
+      - "policy/schemas/agent-bootstrap-v1.schema.json"
+      - "scripts/agent_bootstrap_manifest.py"
+      - "tests/start_bootstrap/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bootstrap-manifest-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  contract:
+    name: BOOTSTRAP_MANIFEST v1 contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate JSON surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m json.tool .github/agent-bootstrap.json >/dev/null
+          python3 -m json.tool policy/agent-bootstrap-v1.json >/dev/null
+          python3 -m json.tool policy/schemas/agent-bootstrap-v1.schema.json >/dev/null
+
+      - name: Validate canonical bootstrap manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/agent_bootstrap_manifest.py .github/agent-bootstrap.json --repo-root .
+
+      - name: Run bootstrap conformance
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/start_bootstrap/test_conformance.py
+          python3 tests/start_bootstrap/test_bootstrap_manifest.py

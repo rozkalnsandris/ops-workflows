@@ -48,6 +48,14 @@ These classes are qualitative control surfaces, not brittle fixed request counts
 
 Used by normal `START <repo>`. Retrieve only enough to identify one canonical current lane: repository-local rules, canonical handoff/continuation when present, current default-branch SHA, and the current issue/PR identity required by that lane. Do not enumerate unrelated issues, PRs, workflow history, comments, files, or commits by default.
 
+#### BOOTSTRAP_MANIFEST_V1 routing
+
+Optional routing contract: `docs/BOOTSTRAP_MANIFEST_V1.md`.
+
+When `.github/agent-bootstrap.json` is present and valid, it may be read first to resolve stable rule paths, shared-policy paths, the stable continuation locator, supported automation modes, and deployment-routing profile. This is a routing optimization only. It does not satisfy any mutable-state fact required by `BOOTSTRAP_MINIMAL`.
+
+The manifest must not cache current SHA/PR/CI/review/mergeability/runtime/authorization state. After routing, retrieve current default-branch and selected-lane facts normally. Missing manifests preserve legacy repository-local bootstrap. Invalid/stale manifests fall back to unambiguous repository-local rules or fail closed when routing remains ambiguous.
+
 ### `PR_REFRESH_COMPACT`
 
 Used while converging one active PR. Refresh only mutable evidence required for the current PR decision: exact PR head, required checks/status, reviews, unresolved review threads, and mergeability/base state only when relevant.

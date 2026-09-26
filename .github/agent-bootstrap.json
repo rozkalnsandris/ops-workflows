@@ -1,0 +1,26 @@
+{
+  "schema": "rozkalns.agent-bootstrap.v1",
+  "repository": "rozkalnsandris/ops-workflows",
+  "shared_policy": {
+    "work_cycle": "docs/AGENT_WORK_CYCLE_V1.md",
+    "github_api_access": "docs/GITHUB_API_ACCESS_V1.md"
+  },
+  "rules": {
+    "primary": "AGENTS.md",
+    "local_strict_rules": [
+      "AGENTS.md#fast-lane-v22-composite",
+      "AGENTS.md#scope-boundary",
+      "AGENTS.md#agent-work-cycle-v1"
+    ]
+  },
+  "continuation": {
+    "kind": "issue",
+    "locator": "38"
+  },
+  "automation": {
+    "fast_lane": true,
+    "auto_run_full": true,
+    "queue_mode": "inactive"
+  },
+  "deployment_profile": "source-only"
+}

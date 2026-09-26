@@ -20,6 +20,16 @@ Provide one predictable operator interaction model across active repositories wh
 
 Repository-wide or multi-lane audits remain explicit audit work, not an implicit side effect of START/SYNC.
 
+## Bootstrap manifest routing
+
+Optional routing contract: `docs/BOOTSTRAP_MANIFEST_V1.md`, with machine policy in `policy/agent-bootstrap-v1.json` and schema in `policy/schemas/agent-bootstrap-v1.schema.json`.
+
+When a repository has adopted `.github/agent-bootstrap.json`, normal `START <repo>` may read that small manifest first to resolve the primary repository-local rules, shared work-cycle/API-access surfaces, stable continuation locator, supported automation modes, and deployment-routing profile. The manifest is routing metadata only; repository-local normative rules remain authoritative and stricter rules always win.
+
+The manifest must never substitute cached mutable SHA, PR, CI/review, mergeability, runtime/deployed revision, authorization-consumed state, secrets, or credentials for fresh canonical reads. After routing is resolved, normal bootstrap still performs the current default-branch and selected-lane reads required by `GITHUB_API_ACCESS_V1` `BOOTSTRAP_MINIMAL`.
+
+A missing manifest preserves the legacy repository-local startup path. If a manifest is malformed, stale, or references missing canonical surfaces, fall back to unambiguous repository-local rules; if routing is also ambiguous, fail closed and STOP rather than selecting a less strict interpretation.
+
 ## GitHub-first tool and transport priority
 
 GitHub is the default control, read and write surface whenever repository/source work can be completed through connected GitHub tooling with equivalent correctness and evidence. Do not use RDC, SSH, a local checkout, shell `git`, `gh`, or `curl` merely as a substitute for supported GitHub-native operations.

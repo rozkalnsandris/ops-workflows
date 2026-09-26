@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rozkalnsandris/ops-workflows/policy/schemas/agent-bootstrap-v1.schema.json",
+  "title": "Repository agent bootstrap manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "repository",
+    "shared_policy",
+    "rules",
+    "continuation",
+    "automation",
+    "deployment_profile"
+  ],
+  "properties": {
+    "schema": {
+      "const": "rozkalns.agent-bootstrap.v1"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "shared_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["work_cycle", "github_api_access"],
+      "properties": {
+        "work_cycle": {
+          "$ref": "#/$defs/repositoryRelativePath"
+        },
+        "github_api_access": {
+          "$ref": "#/$defs/repositoryRelativePath"
+        }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary", "local_strict_rules"],
+      "properties": {
+        "primary": {
+          "$ref": "#/$defs/repositoryRelativePath"
+        },
+        "local_strict_rules": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9._/-]+#[a-z0-9][a-z0-9-]*$"
+          }
+        }
+      }
+    },
+    "continuation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "locator"],
+          "properties": {
+            "kind": {"const": "issue"},
+            "locator": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*$"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "locator"],
+          "properties": {
+            "kind": {"const": "file"},
+            "locator": {
+              "$ref": "#/$defs/repositoryRelativePath"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {
+            "kind": {"const": "none"}
+          }
+        }
+      ]
+    },
+    "automation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fast_lane", "auto_run_full", "queue_mode"],
+      "properties": {
+        "fast_lane": {"type": "boolean"},
+        "auto_run_full": {"type": "boolean"},
+        "queue_mode": {
+          "enum": ["inactive", "supported", "not-applicable"]
+        }
+      }
+    },
+    "deployment_profile": {
+      "enum": ["simple-deploy", "github-only", "source-only", "custom", "none"]
+    }
+  },
+  "$defs": {
+    "repositoryRelativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"
+    }
+  }
+}

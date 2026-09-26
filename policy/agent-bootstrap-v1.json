@@ -1,0 +1,66 @@
+{
+  "schema": "rozkalns.agent-bootstrap-policy.v1",
+  "status": "ACTIVE_SHARED_GOVERNANCE",
+  "canonical_repository": "rozkalnsandris/ops-workflows",
+  "manifest_path": ".github/agent-bootstrap.json",
+  "manifest_schema": "policy/schemas/agent-bootstrap-v1.schema.json",
+  "routing_only": true,
+  "canonical_mutable_state_source": "GITHUB",
+  "precedence": [
+    "REPOSITORY_LOCAL_RULES",
+    "SHARED_POLICY",
+    "BOOTSTRAP_MANIFEST_ROUTING_METADATA"
+  ],
+  "required_top_level_fields": [
+    "schema",
+    "repository",
+    "shared_policy",
+    "rules",
+    "continuation",
+    "automation",
+    "deployment_profile"
+  ],
+  "forbidden_mutable_truth": [
+    "current_main_sha",
+    "current_branch_sha",
+    "current_head_sha",
+    "active_pr_number",
+    "ci_status",
+    "review_state",
+    "mergeability",
+    "runtime_revision",
+    "deployed_revision",
+    "merge_authorization",
+    "live_authorization",
+    "authorization_consumed",
+    "secret",
+    "credential",
+    "token",
+    "password",
+    "api_key"
+  ],
+  "resolution": {
+    "manifest_present_and_valid": "ROUTE_THEN_FRESH_BOOTSTRAP_MINIMAL",
+    "manifest_missing": "LEGACY_REPOSITORY_LOCAL_BOOTSTRAP",
+    "manifest_invalid_or_stale_with_unambiguous_local_rules": "FALLBACK_TO_REPOSITORY_LOCAL_RULES",
+    "manifest_invalid_or_stale_without_unambiguous_local_rules": "STOP_AMBIGUOUS"
+  },
+  "authority": {
+    "manifest_is_authority_source": false,
+    "manifest_may_grant_merge": false,
+    "manifest_may_grant_live": false,
+    "manifest_may_grant_retry": false,
+    "manifest_may_grant_rollback": false,
+    "manifest_may_grant_cleanup": false,
+    "manifest_may_grant_settings_or_permissions": false,
+    "manifest_may_contain_secrets_or_credentials": false
+  },
+  "compatibility": {
+    "agent_work_cycle_remains_normative": true,
+    "github_api_access_remains_normative_for_request_budgets": true,
+    "repository_local_stricter_rules_win": true,
+    "missing_manifest_is_backward_compatible": true,
+    "queue_vnext_activation_changed": false,
+    "simple_deploy_activation_changed": false
+  }
+}

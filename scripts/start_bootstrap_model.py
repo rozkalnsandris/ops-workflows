@@ -38,6 +38,24 @@ class Candidate:
     eligible: bool = True
 
 
+@dataclass(frozen=True)
+class WorkCycleContext:
+    safe_same_scope_work_remaining: bool = False
+    waiting_external: bool = False
+    merge_ready: bool = False
+    full_merge_authority: bool = False
+    live_gate_required: bool = False
+    done: bool = False
+
+
+@dataclass(frozen=True)
+class WorkCycleDecision:
+    disposition: str
+    terminal: bool
+    action_required: bool
+    final_command: str | None = None
+
+
 def github_only_active_for_command(command: str, *, already_active: bool = False) -> bool:
     """Resolve GITHUB-ONLY activation from the current operator command.
 
@@ -86,6 +104,101 @@ def select_canonical_lane(
     if len(winners) != 1:
         return None, "AMBIGUOUS_CANONICAL_LANE"
     return winners[0].candidate_id, "SELECTED"
+
+
+def decide_work_cycle(
+    context: WorkCycleContext,
+    *,
+    repo: str,
+    merge_command: str | None = None,
+    live_command: str | None = None,
+) -> WorkCycleDecision:
+    """Route a selected canonical lane to safe continuation or a real terminal state.
+
+    The function deliberately does not model source-error/ambiguity recovery;
+    those remain governed by route_final_state and repository-local fail-closed
+    rules. This helper proves the positive auto-continuation and owner-gate
+    semantics introduced by Agent Work Cycle v1.
+    """
+    if context.live_gate_required:
+        if not live_command:
+            raise ValueError("live gate requires an exact owner command")
+        return WorkCycleDecision(
+            disposition="OWNER_GATE_LIVE",
+            terminal=True,
+            action_required=True,
+            final_command=live_command,
+        )
+
+    if context.merge_ready and not context.full_merge_authority:
+        if not merge_command:
+            raise ValueError("merge gate requires an exact owner command")
+        return WorkCycleDecision(
+            disposition="OWNER_GATE_MERGE",
+            terminal=True,
+            action_required=True,
+            final_command=merge_command,
+        )
+
+    if context.safe_same_scope_work_remaining or (
+        context.merge_ready and context.full_merge_authority
+    ):
+        return WorkCycleDecision(
+            disposition="CONTINUE_SAFE_WORK",
+            terminal=False,
+            action_required=False,
+            final_command=None,
+        )
+
+    if context.waiting_external:
+        return WorkCycleDecision(
+            disposition="WAIT_EXTERNAL",
+            terminal=True,
+            action_required=False,
+            final_command=f"SYNC {repo}",
+        )
+
+    if context.done:
+        return WorkCycleDecision(
+            disposition="DONE",
+            terminal=True,
+            action_required=False,
+            final_command=f"START {repo}",
+        )
+
+    raise ValueError("non-terminal work-cycle context has no safe route")
+
+
+def render_compact_terminal_response(
+    decision: WorkCycleDecision,
+    *,
+    evidence: Sequence[str] = (),
+    done: Sequence[str] = (),
+    blocker: str | None = None,
+) -> str:
+    """Render the normative compact terminal/status response shape.
+
+    The final command is deliberately the last actionable line. Empty optional
+    fields are omitted and at most four decisive evidence facts are accepted.
+    """
+    if not decision.terminal:
+        raise ValueError("compact terminal response requires a terminal decision")
+    if not decision.final_command:
+        raise ValueError("terminal decision requires one final command")
+    if len(evidence) > 4:
+        raise ValueError("compact response allows at most four evidence facts")
+
+    lines = [f"STATE: {decision.disposition}"]
+    if evidence:
+        lines.append("EVIDENCE: " + " | ".join(evidence))
+    if done:
+        lines.append("DONE: " + " | ".join(done))
+    if blocker:
+        lines.append("NOT DONE / BLOCKER: " + blocker)
+    if decision.action_required:
+        lines.append("ACTION REQUIRED")
+    lines.extend(["", decision.final_command])
+    return "\n".join(lines)
 
 
 def route_final_state(

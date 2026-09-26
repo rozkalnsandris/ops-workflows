@@ -12,13 +12,47 @@ Provide one predictable operator interaction model across active repositories wh
 
 ## Work-cycle model
 
-`START <repo>` performs minimum-sufficient bootstrap using repository-local routing. Read current local rules, current default-branch SHA, canonical handoff/continuation when present, then identify one current work item/lane/gate. Inspect only the issue/PR/dependency evidence required for that lane.
+`START <repo>` performs minimum-sufficient bootstrap using repository-local routing. Read current local rules, current default-branch SHA, canonical handoff/continuation when present, then identify exactly one current work item/lane/gate. Inspect only the issue/PR/dependency evidence required for that lane.
 
-`SYNC <repo>` is incremental refresh. Re-check current default branch, current work item, current PR/head and current checks/reviews against the active assumptions. Do not turn SYNC into a repo-wide inventory.
+After one canonical lane is selected, `START <repo>` continues all immediately safe same-scope technical work until a genuine terminal condition exists. It must not normally return a status equivalent to “the next safe technical step is X” when X can be executed immediately under current authority.
 
-`turpini` resumes the exact same scope. It permits only the technical continuation already allowed by local policy and creates no new owner authority.
+`SYNC <repo>` is incremental refresh of the already-selected/current lane. Re-check current default branch when relevant, current work item, current PR/head and current checks/reviews against the active assumptions. Do not turn SYNC into a repo-wide inventory or restart lane selection without evidence that continuation changed.
 
-Repository-wide or multi-lane audits remain explicit audit work, not an implicit side effect of START/SYNC.
+`turpini` resumes the exact same scope using minimum-sufficient incremental reads and continues safe technical work. It creates no new merge, LIVE, retry, rollback, cleanup, credential, permission, repository-settings, runtime or production-data authority.
+
+`AUDIT-HANDOFF <repo>` and other repository-wide or multi-lane audits remain explicit deeper audit work. They are never an implicit side effect of normal START/SYNC/turpini.
+
+## Safe auto-continuation
+
+The normal work-cycle target is:
+
+```text
+resolve repository-local rules / BOOTSTRAP_MANIFEST_V1 when adopted
+-> BOOTSTRAP_MINIMAL
+-> select exactly one canonical lane
+-> execute immediately safe same-scope technical work
+-> stop only at:
+   1. genuine owner authorization/decision gate
+   2. external wait with no remaining safe advance
+   3. fail-closed error, drift or ambiguity
+   4. DONE
+```
+
+Safe technical continuation does not itself create an owner gate. Subject to repository-local authority and scope, it includes:
+
+- minimum-sufficient GitHub reads;
+- source inspection;
+- focused source/docs/policy edits inside the active scope;
+- local/static tests;
+- branch/PR preparation when the active repository-local mode already authorizes it;
+- exact-head CI/review refresh;
+- scope-preserving corrective work inside the active attempt budget;
+- read-only preflight/evidence refresh;
+- exact-main read-only reconciliation after a confirmed write.
+
+If a current PR is waiting on CI/review and no other same-scope safe step can advance the lane, an external-wait terminal state is valid. If same-scope safe work still exists, perform it first.
+
+A repository-local explicitly activated FULL mode may already freeze issue-scoped source or merge authority. The shared work cycle must not insert a second generic owner gate inside authority that the stricter local contract already validly grants. Conversely, a source lane that reaches a LIVE/deploy/runtime/DB/data/credential/permission/settings/trust-boundary requirement must stop before that mutation unless the exact local authority already exists.
 
 ## Bootstrap manifest routing
 
@@ -54,7 +88,7 @@ Before any mutation, rate-limit responses may trigger only the bounded read-only
 
 ## Owner gates
 
-Safe source work should converge through implementation, tests, Draft PR, CI/review and Ready without artificial owner interruptions when local rules permit. Polling CI, inspecting exact-head state, read-only preflight and scope-preserving corrections are technical steps rather than owner decisions.
+Safe source work should converge through implementation, tests, Draft PR, exact-head CI/review and Ready without artificial owner interruptions when local rules permit. Polling CI, inspecting exact-head state, read-only preflight and scope-preserving corrections are technical steps rather than owner decisions.
 
 MERGE remains explicit unless a repository's separately activated FULL mode explicitly freezes issue-scoped merge authority. Merge never grants LIVE/deploy authority.
 
@@ -64,16 +98,35 @@ LIVE/deploy/runtime/credentials/permissions/production-data changes remain separ
 
 After the first authorized mutation begins, any error, timeout, unexpected state, target/head drift or authorization uncertainty ends mutation authority for that run unless retry/rollback/cleanup was explicitly pre-authorized. Gather only the necessary read-only evidence and STOP. Never turn a presentation command into implicit authority.
 
+## Compact terminal response contract
+
+Normal repository work-cycle terminal/status responses are intentionally compact. Include only evidence that changes the current decision and omit empty optional fields.
+
+Preferred shape:
+
+```text
+STATE: <one-line state>
+EVIDENCE: <up to four decisive facts, when needed>
+DONE: <what completed, when useful>
+NOT DONE / BLOCKER: <only when applicable>
+
+<exactly one final copy-pasteable next command>
+```
+
+Use `ACTION REQUIRED` only immediately before the final command when a genuine owner authorization/decision gate exists. Do not use it for CI waiting, read-only refresh, ordinary same-scope technical continuation, or DONE.
+
+Do not replay long history during normal START/SYNC/turpini. If immediately executable same-scope safe work remains, perform it before returning a terminal response. `turpini` is a valid final command only when the current execution/session boundary genuinely pauses while same-scope safe technical continuation still remains.
+
 ## Exact Next Command Contract
 
 Every user-visible terminal/status response for repository work ends with exactly one copy-pasteable command, as its final actionable content.
 
 1. Genuine owner gate exists -> `ACTION REQUIRED` with the exact current authorization command and bindings.
-2. No owner gate; mutable GitHub/external state needs refresh -> `SYNC <repo>`.
-3. No owner gate; same-scope technical continuation is safe now -> `turpini`.
+2. No owner gate; mutable GitHub/external state must change before work can continue -> `SYNC <repo>`.
+3. No owner gate; the current execution boundary pauses while same-scope safe technical continuation remains -> `turpini`.
 4. Current outcome is complete -> `START <repo>`.
 
-`ACTION REQUIRED` is reserved for genuine owner decisions. Do not invent MERGE/LIVE/retry/rollback/cleanup authority simply to produce a command. Never output a menu of next commands.
+The command selection contract is presentation only. It never creates authority. Do not invent MERGE/LIVE/retry/rollback/cleanup authority simply to produce a command and never output a menu of next commands.
 
 ## Rollout scope
 

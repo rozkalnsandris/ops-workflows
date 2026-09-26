@@ -1,0 +1,67 @@
+name: AUTO-RUN FULL single-issue state normalization contract
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auto-run-full-single-issue-state-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate JSON surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for path in (
+              Path('policy/auto-run-full-single-issue-state-v2.json'),
+              Path('policy/schemas/auto-run-full-single-issue-run-state-v2.schema.json'),
+              Path('policy/schemas/auto-run-full-single-issue-controller-v2.schema.json'),
+          ):
+              json.loads(path.read_text(encoding='utf-8'))
+          print('AUTO_RUN_FULL_SINGLE_ISSUE_JSON=PASS')
+          PY
+
+      - name: Run focused state-normalization tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest -v tests.auto_run_full_single_issue.test_state_normalization
+
+      - name: Validate source-only boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          required = [
+              Path('docs/AUTO_RUN_FULL_SINGLE_ISSUE_STATE_V2.md'),
+              Path('policy/auto-run-full-single-issue-state-v2.json'),
+              Path('policy/schemas/auto-run-full-single-issue-run-state-v2.schema.json'),
+              Path('policy/schemas/auto-run-full-single-issue-controller-v2.schema.json'),
+              Path('scripts/validate_auto_run_full_single_issue_state.py'),
+              Path('tests/auto_run_full_single_issue/test_state_normalization.py'),
+          ]
+          for path in required:
+              if not path.is_file() or path.stat().st_size == 0:
+                  raise SystemExit(f'missing state-normalization contract file: {path}')
+          print('AUTO_RUN_FULL_SINGLE_ISSUE_STATE_V2=PASS')
+          PY

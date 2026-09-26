@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rozkalnsandris/ops-workflows/policy/schemas/auto-run-full-single-issue-run-state-v2.schema.json",
+  "title": "AUTO-RUN FULL single-issue run state v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "repository",
+    "issue_number",
+    "run_id",
+    "scope_digest_sha256",
+    "revision",
+    "phase",
+    "branch",
+    "pr_number",
+    "correction_count",
+    "stop_reason",
+    "owner_gate",
+    "completion"
+  ],
+  "properties": {
+    "schema": {
+      "const": "rozkalns.auto-run-full-single-issue-run-state.v2"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "issue_number": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "run_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "scope_digest_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "phase": {
+      "enum": [
+        "PLANNED",
+        "ACTIVE_SOURCE",
+        "PR_OPEN",
+        "WAITING_CI",
+        "READY",
+        "STOPPED",
+        "DONE"
+      ]
+    },
+    "branch": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "pr_number": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "correction_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2
+    },
+    "stop_reason": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "owner_gate": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "enum": [
+            "MERGE",
+            "LIVE",
+            "SCOPE_DECISION",
+            "REAUTHORIZATION"
+          ]
+        }
+      ]
+    },
+    "completion": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/completion"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "completion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exact_main_sha",
+        "receipt_ref"
+      ],
+      "properties": {
+        "exact_main_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "receipt_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

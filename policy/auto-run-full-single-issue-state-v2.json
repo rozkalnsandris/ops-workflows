@@ -1,0 +1,138 @@
+{
+  "schema": "rozkalns.auto-run-full-single-issue-state-policy.v2",
+  "status": "SHARED_SOURCE_CONTRACT_NOT_ACTIVE_IN_CONSUMERS",
+  "canonical_repository": "rozkalnsandris/ops-workflows",
+  "tracking": {
+    "roadmap_issue": 119,
+    "slice_issue": 123,
+    "rollout_issue": 124,
+    "queue_vnext_issue": 96
+  },
+  "activation": {
+    "consumer_auto_migration": false,
+    "active_legacy_run_rewrite": false,
+    "new_runs_use_v2_only_after_consumer_adoption": true,
+    "queue_vnext_activated": false
+  },
+  "authority": {
+    "changes_source_authority": false,
+    "changes_merge_authority": false,
+    "changes_live_authority": false,
+    "creates_retry_rollback_cleanup_authority": false,
+    "state_block_is_authority_by_itself": false,
+    "repo_local_stricter_rules_win": true
+  },
+  "ownership": {
+    "target_issue": [
+      "REPOSITORY",
+      "ISSUE_NUMBER",
+      "SCOPE_DIGEST",
+      "RUN_ID",
+      "REVISION",
+      "PHASE",
+      "BRANCH_POINTER",
+      "PR_POINTER",
+      "CORRECTION_COUNT",
+      "STOP_REASON",
+      "OWNER_GATE",
+      "COMPLETION_SUMMARY"
+    ],
+    "controller": [
+      "CONTROLLER_STATE",
+      "ACTIVE_ISSUE_POINTER",
+      "ACTIVE_RUN_POINTER",
+      "ACTIVE_RUN_DIGEST",
+      "LAST_TRANSITION_ID"
+    ],
+    "fresh_github_only": [
+      "CI_STATUS",
+      "REVIEWS",
+      "UNRESOLVED_THREADS",
+      "MERGEABILITY"
+    ],
+    "receipt_evidence_only": true,
+    "chat_is_canonical": false
+  },
+  "target_state": {
+    "schema": "rozkalns.auto-run-full-single-issue-run-state.v2",
+    "phases": [
+      "PLANNED",
+      "ACTIVE_SOURCE",
+      "PR_OPEN",
+      "WAITING_CI",
+      "READY",
+      "STOPPED",
+      "DONE"
+    ],
+    "correction_count_min": 0,
+    "correction_count_max": 2,
+    "revision_increments_exactly_one": true,
+    "stopped_requires_reason": true,
+    "stopped_auto_resume": false,
+    "done_requires_completion": true
+  },
+  "controller": {
+    "schema": "rozkalns.auto-run-full-single-issue-controller.v2",
+    "states": [
+      "IDLE",
+      "ACTIVE",
+      "STOPPED"
+    ],
+    "maximum_active_runs": 1,
+    "copies_target_phase": false,
+    "copies_branch_or_pr": false,
+    "copies_ci_or_review": false,
+    "copies_issue_body_or_dod": false,
+    "stale_writer_disposition": "STOP"
+  },
+  "transition_rules": {
+    "same_run_edges": [
+      "PLANNED->ACTIVE_SOURCE",
+      "ACTIVE_SOURCE->PR_OPEN",
+      "PR_OPEN->WAITING_CI",
+      "WAITING_CI->WAITING_CI_CORRECTION",
+      "WAITING_CI->READY",
+      "READY->DONE"
+    ],
+    "any_non_done_may_stop": true,
+    "exact_replay_is_idempotent": true,
+    "transition_id_content_collision": "STOP",
+    "stale_revision": "STOP",
+    "wrong_run_or_issue": "STOP"
+  },
+  "legacy_compatibility": {
+    "read_only": true,
+    "universal_legacy_schema_claimed": false,
+    "consumer_adapter_required": true,
+    "active_or_historical_legacy_rewritten": false,
+    "collision_disposition": "STOP"
+  },
+  "receipts": {
+    "mutable_control_state_allowed": false,
+    "per_read_refresh_receipt_allowed": false,
+    "historical_receipts_deleted": false
+  },
+  "write_preflight": {
+    "contract": "WRITE_PREFLIGHT_COMPACT_V1",
+    "exact_existing_identity": "RECONCILE_OR_NOOP",
+    "conflicting_identity": "STOP",
+    "stale_writer": "STOP",
+    "second_framework_created": false
+  },
+  "reconstruction": {
+    "normalized_required_control_objects": 2,
+    "synthetic_legacy_required_control_objects": 4,
+    "chat_required": false,
+    "fresh_mutable_github_facts_on_demand": true
+  },
+  "release": {
+    "done_release_allowed": true,
+    "stopped_release_requires_explicit_abort_decision": true,
+    "ambiguous_consumed_mutation_auto_cleanup": false
+  },
+  "queue_relationship": {
+    "queue_v1_modified_by_this_contract": false,
+    "queue_vnext_96_activated": false,
+    "future_reuse_of_target_state_pattern_permitted": true
+  }
+}

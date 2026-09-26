@@ -1,0 +1,111 @@
+{
+  "schema": "rozkalns.github-api-access.write-preflight.v1",
+  "status": "ACTIVE_NORMATIVE_APPENDIX",
+  "parent_contract": {
+    "document": "docs/GITHUB_API_ACCESS_V1.md",
+    "policy": "policy/github-api-access-v1.json",
+    "schema": "rozkalns.github-api-access.v1"
+  },
+  "tracking_issue": 122,
+  "budget_class": "WRITE_PREFLIGHT_COMPACT",
+  "authority": {
+    "preflight_is_authorization": false,
+    "creates_source_authority": false,
+    "creates_merge_authority": false,
+    "creates_live_or_deploy_authority": false,
+    "creates_retry_rollback_cleanup_authority": false,
+    "read_only_noop_or_rejection_consumes_mutation_authority": false,
+    "post_dispatch_parent_mutation_boundary_wins": true
+  },
+  "access": {
+    "serial_targeted_reads_only": true,
+    "minimum_sufficient": true,
+    "reuse_same_step_evidence_when_sufficient": true,
+    "unrelated_repo_scan_allowed": false,
+    "alternate_tool_or_endpoint_for_broader_duplicate_search_allowed": false,
+    "capability_gap_fails_closed": true
+  },
+  "dispositions": [
+    "WRITE_PREFLIGHT_ELIGIBLE",
+    "WRITE_PREFLIGHT_ALREADY_SATISFIED",
+    "WRITE_PREFLIGHT_CONFLICT",
+    "WRITE_PREFLIGHT_INVALID_HEAD_BASE",
+    "WRITE_PREFLIGHT_DUPLICATE_EXACT_RECONCILED",
+    "WRITE_PREFLIGHT_DUPLICATE_CONFLICT",
+    "WRITE_PREFLIGHT_AUTHORITY_DRIFT",
+    "WRITE_PREFLIGHT_CAPABILITY_UNAVAILABLE"
+  ],
+  "profiles": {
+    "CREATE_BRANCH_REF": {
+      "bindings": [
+        "REPOSITORY",
+        "REF_NAME",
+        "SOURCE_SHA"
+      ],
+      "targeted_exact_ref_lookup": true,
+      "absent": "WRITE_PREFLIGHT_ELIGIBLE",
+      "exact_sha_when_idempotent": "WRITE_PREFLIGHT_ALREADY_SATISFIED",
+      "conflicting_sha": "WRITE_PREFLIGHT_CONFLICT",
+      "force_update_allowed": false,
+      "delete_recreate_allowed": false,
+      "alternate_branch_allowed": false
+    },
+    "CREATE_PULL_REQUEST": {
+      "bindings": [
+        "REPOSITORY",
+        "BASE",
+        "HEAD"
+      ],
+      "prove_head_base_when_capability_available": true,
+      "prove_eligible_diff_when_practical": true,
+      "target_existing_pr_search_to_intended_head_base": true,
+      "none_existing_valid_diff": "WRITE_PREFLIGHT_ELIGIBLE",
+      "exact_existing": "WRITE_PREFLIGHT_DUPLICATE_EXACT_RECONCILED",
+      "conflicting_existing": "WRITE_PREFLIGHT_DUPLICATE_CONFLICT",
+      "invalid_or_no_diff": "WRITE_PREFLIGHT_INVALID_HEAD_BASE",
+      "substitute_branch_or_pr_allowed": false
+    },
+    "DURABLE_OBJECT": {
+      "stable_machine_identity_required_when_duplicate_unsafe": true,
+      "search_expected_scope_only": true,
+      "absent": "WRITE_PREFLIGHT_ELIGIBLE",
+      "exact_identity_and_protected_payload": "WRITE_PREFLIGHT_DUPLICATE_EXACT_RECONCILED",
+      "identity_collision": "WRITE_PREFLIGHT_DUPLICATE_CONFLICT"
+    },
+    "DURABLE_COMMENT_RECEIPT": {
+      "deterministic_receipt_identity_required_when_duplicate_unsafe": true,
+      "inspect_relevant_thread_only": true,
+      "absent": "WRITE_PREFLIGHT_ELIGIBLE",
+      "exact_receipt": "WRITE_PREFLIGHT_DUPLICATE_EXACT_RECONCILED",
+      "receipt_collision": "WRITE_PREFLIGHT_DUPLICATE_CONFLICT"
+    },
+    "UPDATE_ISSUE_OR_PR_METADATA": {
+      "bind_exact_object_and_intended_fields": true,
+      "refresh_only_fields_needed_for_update_decision": true,
+      "already_intended": "WRITE_PREFLIGHT_ALREADY_SATISFIED",
+      "safe_delta": "WRITE_PREFLIGHT_ELIGIBLE",
+      "conflicting_state_or_risk_expansion": "WRITE_PREFLIGHT_CONFLICT",
+      "prefer_add_remove_semantics_when_intended": true,
+      "accidental_full_collection_replacement_allowed": false
+    },
+    "MERGE": {
+      "handled_by_write_preflight_compact": false,
+      "parent_budget_class": "FINAL_PREMERGE_COMPACT"
+    }
+  },
+  "dispatch": {
+    "eligible_allows_dispatch_only_under_preexisting_authority": true,
+    "already_satisfied_dispatch_allowed": false,
+    "duplicate_exact_reconciled_dispatch_allowed": false,
+    "conflict_dispatch_allowed": false,
+    "invalid_head_base_dispatch_allowed": false,
+    "authority_drift_dispatch_allowed": false,
+    "capability_unavailable_dispatch_allowed": false
+  },
+  "post_dispatch": {
+    "rerun_preflight_to_create_retry_authority": false,
+    "automatic_duplicate_mutation_allowed": false,
+    "http_429_or_timeout_proves_not_applied": false,
+    "parent_mutation_boundary_required": true
+  }
+}

@@ -1,0 +1,75 @@
+name: GitHub API WRITE_PREFLIGHT_COMPACT contract
+
+on:
+  pull_request:
+    paths:
+      - "docs/WRITE_PREFLIGHT_COMPACT_V1.md"
+      - "policy/github-api-access-write-preflight-v1.json"
+      - "scripts/write_preflight_model.py"
+      - "tests/github_api_access/test_write_preflight.py"
+      - ".github/workflows/github-api-write-preflight-policy-gate.yml"
+      - "docs/GITHUB_API_ACCESS_V1.md"
+      - "policy/github-api-access-v1.json"
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/WRITE_PREFLIGHT_COMPACT_V1.md"
+      - "policy/github-api-access-write-preflight-v1.json"
+      - "scripts/write_preflight_model.py"
+      - "tests/github_api_access/test_write_preflight.py"
+      - ".github/workflows/github-api-write-preflight-policy-gate.yml"
+      - "docs/GITHUB_API_ACCESS_V1.md"
+      - "policy/github-api-access-v1.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-api-write-preflight-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate machine policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m json.tool policy/github-api-access-write-preflight-v1.json >/dev/null
+
+      - name: Run WRITE_PREFLIGHT_COMPACT tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest -v tests.github_api_access.test_write_preflight
+
+      - name: Validate required parent and extension surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          required = [
+              Path('docs/GITHUB_API_ACCESS_V1.md'),
+              Path('policy/github-api-access-v1.json'),
+              Path('docs/WRITE_PREFLIGHT_COMPACT_V1.md'),
+              Path('policy/github-api-access-write-preflight-v1.json'),
+              Path('scripts/write_preflight_model.py'),
+              Path('tests/github_api_access/test_write_preflight.py'),
+          ]
+          for path in required:
+              if not path.is_file() or path.stat().st_size == 0:
+                  raise SystemExit(f'missing WRITE_PREFLIGHT_COMPACT contract file: {path}')
+
+          print('WRITE_PREFLIGHT_COMPACT=PASS')
+          PY

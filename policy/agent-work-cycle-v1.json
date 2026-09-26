@@ -17,6 +17,33 @@
     "historical_ci_comments_reviews_by_default": false,
     "demand_driven_expansion": true
   },
+  "execution": {
+    "start_auto_continues_safe_same_scope_work": true,
+    "start_must_not_stop_after_reporting_immediately_executable_safe_step": true,
+    "sync_refreshes_selected_lane_only": true,
+    "continue_preserves_exact_scope": true,
+    "audit_handoff_is_explicit_deep_mode": true,
+    "safe_technical_steps_create_owner_gate": false,
+    "safe_technical_steps": [
+      "MINIMUM_SUFFICIENT_GITHUB_READS",
+      "SOURCE_INSPECTION",
+      "FOCUSED_SOURCE_DOCS_POLICY_EDITS",
+      "LOCAL_OR_STATIC_TESTS",
+      "AUTHORIZED_BRANCH_OR_PR_PREPARATION",
+      "EXACT_HEAD_CI_REVIEW_REFRESH",
+      "SCOPE_PRESERVING_CORRECTION_WITHIN_ATTEMPT_BUDGET",
+      "READ_ONLY_PREFLIGHT_OR_EVIDENCE_REFRESH",
+      "EXACT_MAIN_READ_ONLY_RECONCILIATION"
+    ],
+    "terminal_conditions": [
+      "GENUINE_OWNER_GATE",
+      "EXTERNAL_WAIT_WITH_NO_SAFE_ADVANCE",
+      "FAIL_CLOSED_ERROR_DRIFT_OR_AMBIGUITY",
+      "DONE"
+    ],
+    "full_mode_issue_scoped_authority_must_not_gain_extra_generic_gate": true,
+    "live_requirement_stops_before_live_mutation_without_exact_authority": true
+  },
   "tool_transport_priority": {
     "default_surface": "GITHUB",
     "prefer_connected_github_for_github_native_work": true,
@@ -39,6 +66,22 @@
     "post_mutation_uncertainty_fail_closed": true,
     "automatic_retry_rollback_cleanup": false
   },
+  "response_contract": {
+    "compact_terminal_response_required": true,
+    "normal_field_order": [
+      "STATE",
+      "EVIDENCE",
+      "DONE",
+      "NOT_DONE_OR_BLOCKER",
+      "FINAL_COMMAND"
+    ],
+    "evidence_max_decisive_facts": 4,
+    "omit_empty_optional_fields": true,
+    "action_required_only_for_genuine_owner_gate": true,
+    "safe_continuation_must_run_before_terminal_response_when_immediately_available": true,
+    "turpini_only_when_execution_boundary_pauses_with_same_scope_safe_work_remaining": true,
+    "long_history_replay_by_default": false
+  },
   "next_command_contract": {
     "required_on_every_user_visible_work_cycle_terminal_response": true,
     "exactly_one_recommended_command": true,
@@ -49,7 +92,7 @@
     "selection_order": [
       "EXACT_OWNER_AUTHORIZATION_IF_REAL_GATE_EXISTS",
       "SYNC_REPO_WHEN_WAITING_ON_MUTABLE_GITHUB_OR_EXTERNAL_STATE",
-      "TURPINI_WHEN_SAME_SCOPE_TECHNICAL_CONTINUATION_IS_READY",
+      "TURPINI_WHEN_EXECUTION_BOUNDARY_PAUSES_WITH_SAFE_SAME_SCOPE_WORK_REMAINING",
       "START_REPO_WHEN_CURRENT_OUTCOME_IS_DONE"
     ],
     "never_implies_merge_or_live_authority": true

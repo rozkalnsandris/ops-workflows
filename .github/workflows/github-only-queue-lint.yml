@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   queue-lint:
-    if: startsWith(github.event.issue.title, '[DEPLOY-QUEUE]')
+    if: github.event.issue.state == 'open' && startsWith(github.event.issue.title, '[DEPLOY-QUEUE]')
     name: Deploy queue contract lint
     runs-on: ubuntu-24.04
     timeout-minutes: 5

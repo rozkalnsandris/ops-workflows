@@ -8,20 +8,21 @@ Before changing shared deployment architecture, read:
 
 1. `docs/SIMPLE_DEPLOY_V1_PLAN.md` — accepted architecture plan;
 2. `docs/DELIVERY_PLATFORM_ROADMAP.md` — canonical implementation order and final-audit clarifications;
-3. issue `#97` — current shared SIMPLE-DEPLOY implementation work item;
-4. `rozkalnsandris/RPi5_main#666` — generic trusted runtime executor source;
-5. `rozkalnsandris/rozkalns_weather#142` — first consumer/canary;
+3. issue `#97` — completed shared SIMPLE-DEPLOY implementation work item;
+4. `rozkalnsandris/RPi5_main#666` — completed generic trusted runtime executor source;
+5. `rozkalnsandris/rozkalns_weather#142` — completed first consumer/canary source adoption;
 6. issue `#96` — post-fleet AUTO-RUN FULL Queue vNext, intentionally blocked until SIMPLE-DEPLOY is proven across intended consumers.
+
+Current fleet phase is rollout/reuse validation. Fresh `RPi5_main` master-plan state governs mutable fleet/LIVE selection; `#96` remains blocked until its existing fleet-stability prerequisites are freshly proven.
 
 Canonical order is:
 
 ```text
-ops-workflows#97 shared SIMPLE-DEPLOY
--> RPi5_main#666 generic pull deployer
--> Weather#142 canary
--> one explicit cutover LIVE gate
--> prove Weather
--> migrate/test compatible fleet
+ops-workflows#97 shared SIMPLE-DEPLOY — COMPLETE
+-> RPi5_main#666 generic pull deployer source — COMPLETE
+-> Weather#142 canary source/adoption — COMPLETE
+-> Weather one-time cutover + end-to-end proof — COMPLETE / ACTIVE_STANDING
+-> migrate/test compatible fleet + prove non-Weather runtime reuse — CURRENT
 -> declare SIMPLE-DEPLOY stable/default
 -> ONLY THEN ops-workflows#96 Queue vNext
 ```

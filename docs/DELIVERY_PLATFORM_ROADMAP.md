@@ -1,12 +1,12 @@
 # Delivery platform roadmap — SIMPLE-DEPLOY first, Queue vNext second
 
-**Status:** canonical planning/sequence document; implementation not yet active  
+**Status:** canonical planning/sequence document; shared implementation + Weather canary stages complete, compatible-fleet rollout/reuse validation active  
 **Repository:** `rozkalnsandris/ops-workflows`  
-**Current shared implementation issue:** `#97`  
+**Completed shared implementation issue:** `#97`  
 **Architecture umbrella:** `#94`  
-**Generic RPi5 executor:** `rozkalnsandris/RPi5_main#666`  
-**First consumer/canary:** `rozkalnsandris/rozkalns_weather#142`  
-**Post-fleet next phase:** `#96`
+**Completed generic RPi5 executor source:** `rozkalnsandris/RPi5_main#666`  
+**Completed first consumer/canary source adoption:** `rozkalnsandris/rozkalns_weather#142`  
+**Post-fleet next phase (blocked):** `#96`
 
 ## 1. Canonical objective
 
@@ -212,34 +212,33 @@ A deployment failure never grants DB/network/secret/destructive authority.
 
 ## 12. Platform implementation sequence
 
-Canonical order:
+Canonical order and current stage:
 
 ```text
-1. ops-workflows#97
-   implement shared SIMPLE-DEPLOY workflow/policy/schema/tests
+1. ops-workflows#97 — COMPLETE
+   shared SIMPLE-DEPLOY workflow/policy/schema/tests accepted
 
-2. RPi5_main#666
-   implement generic trusted pull deployer source/tests
+2. RPi5_main#666 — COMPLETE (source)
+   generic trusted pull deployer source/tests accepted
 
-3. Weather#142
-   first consumer/canary: tiny caller + manifest + Compose/policy reconciliation
+3. Weather#142 — COMPLETE (source/canary adoption)
+   tiny caller + manifest + Compose/policy reconciliation accepted
 
-4. one explicit Weather/RPi5 cutover LIVE gate
-   install/enable generic deployer + activate Weather target
+4. Weather/RPi5 one-time cutover + end-to-end proof — COMPLETE / ACTIVE_STANDING
+   fresh RPi5 master-plan reconciliation records Weather SIMPLE-DEPLOY as implemented and active standing
 
-5. prove end-to-end Weather release
-   merge -> GHCR -> exact digest -> pull deploy -> health/readiness receipt
+5. compatible-fleet rollout/reuse validation — CURRENT
+   migrate/test compatible consumers one at a time; current RPi5 reconciliation records Hermes Tech and CV source/publication preparation as complete but does not select or authorize either LIVE activation
 
-6. migrate existing compatible services
-   Hermes Deals first, then other Docker/Compose services
+6. prove at least one non-Weather runtime reuse and stable ordinary release flow
 
-7. prove at least one non-Weather consumer and declare SIMPLE-DEPLOY stable/default
+7. declare SIMPLE-DEPLOY stable/default only after the intended fleet criteria are actually satisfied
 
-8. ONLY THEN ops-workflows#96
+8. ONLY THEN ops-workflows#96 — BLOCKED UNTIL PREREQUISITES PASS
    AUTO-RUN FULL Queue vNext
 ```
 
-Do not run Queue vNext in parallel with SIMPLE-DEPLOY platform/canary rollout.
+Do not run Queue vNext in parallel with SIMPLE-DEPLOY fleet rollout/reuse validation. Current mutable fleet/LIVE selection must be resolved from fresh `RPi5_main` master-plan state rather than inferred from this historical sequence.
 
 ## 13. AUTO-RUN FULL Queue vNext after fleet rollout
 

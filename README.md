@@ -28,20 +28,19 @@ Canonical cross-project sequencing is documented in:
 
 `docs/DELIVERY_PLATFORM_ROADMAP.md`
 
-The current platform order is deliberately serial:
+The platform order is deliberately serial. Current GitHub state has completed the shared implementation, generic executor source, Weather canary adoption, and Weather standing activation/proof stages; the current phase is compatible-fleet rollout/reuse validation:
 
 ```text
-1. ops-workflows#97 — implement shared SIMPLE-DEPLOY workflow/policy/schema/tests
-2. RPi5_main#666 — implement one generic trusted GHCR pull deployer
-3. rozkalns_weather#142 — first consumer/canary adoption
-4. one explicit Weather/RPi5 cutover LIVE gate
-5. prove Weather end to end
-6. migrate/test other compatible Docker/Compose services
-7. declare SIMPLE-DEPLOY stable/default
-8. ONLY THEN ops-workflows#96 — AUTO-RUN FULL Queue vNext
+1. ops-workflows#97 — shared SIMPLE-DEPLOY workflow/policy/schema/tests — COMPLETE
+2. RPi5_main#666 — generic trusted GHCR pull deployer source — COMPLETE
+3. rozkalns_weather#142 — first consumer/canary source adoption — COMPLETE
+4. Weather/RPi5 one-time cutover + end-to-end proof — COMPLETE / ACTIVE_STANDING
+5. migrate/test other compatible Docker/Compose services + prove non-Weather runtime reuse — CURRENT
+6. declare SIMPLE-DEPLOY stable/default after fleet criteria are satisfied
+7. ONLY THEN ops-workflows#96 — AUTO-RUN FULL Queue vNext
 ```
 
-Do not implement Queue vNext in parallel with SIMPLE-DEPLOY rollout. Current Queue v1/A1 remains source-policy design until later explicit adoption.
+Do not implement Queue vNext in parallel with SIMPLE-DEPLOY rollout. Current Queue v1/A1 remains source-policy design until later explicit adoption, and `#96` remains blocked until its existing fleet-stability prerequisites are freshly proven.
 
 ## FAST-LANE v2.2 Composite
 
@@ -105,17 +104,19 @@ Canonical implementation/sequence clarifications:
 
 `docs/DELIVERY_PLATFORM_ROADMAP.md`
 
-Current shared implementation work item:
+Completed shared implementation work item:
 
 `#97`
 
-Generic trusted runtime executor source:
+Completed generic trusted runtime executor source:
 
 `rozkalnsandris/RPi5_main#666`
 
-First consumer/canary:
+Completed first consumer/canary source adoption:
 
 `rozkalnsandris/rozkalns_weather#142`
+
+Current fleet/LIVE selection is governed by fresh `RPi5_main` master-plan state. Weather is already `IMPLEMENTED / ACTIVE_STANDING`; remaining SIMPLE-DEPLOY work is fleet rollout/reuse validation, while `ops-workflows#96` remains future/blocked until its existing prerequisites are proven.
 
 Target ordinary-release UX after a consumer has explicitly migrated and completed its one-time cutover:
 

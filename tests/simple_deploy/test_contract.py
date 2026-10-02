@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -133,6 +134,26 @@ class SimpleDeployContractTests(unittest.TestCase):
         manifest["target"]["alias"] = "bad\noutput"
         with self.assertRaises(ValidationError):
             validate_manifest(manifest)
+
+    def test_bootstrap_manifest_matches_consumer_contract(self) -> None:
+        path = ROOT / "templates" / "simple-deploy" / ".simple-deploy.json"
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        result = validate_manifest(manifest, "rozkalnsandris/example-service")
+        self.assertEqual(result["image"], "ghcr.io/rozkalnsandris/example-service")
+        self.assertEqual(result["target_alias"], "example-service-rpi5")
+
+    def test_bootstrap_caller_uses_immutable_shared_pin(self) -> None:
+        path = ROOT / "templates" / "simple-deploy" / ".github" / "workflows" / "simple-deploy.yml"
+        caller = path.read_text(encoding="utf-8")
+        self.assertNotIn("@main", caller)
+        self.assertNotIn("@v1", caller)
+        self.assertRegex(
+            caller,
+            r"uses:\s*rozkalnsandris/ops-workflows/\.github/workflows/simple-deploy\.yml@[0-9a-f]{40}\s+#\s+v\d+\.\d+\.\d+",
+        )
+        self.assertIn("source_sha: ${{ github.sha }}", caller)
+        self.assertIn("contents: read", caller)
+        self.assertIn("packages: write", caller)
 
     def test_policy_forbids_runtime_credentials_and_sensitive_mutation(self) -> None:
         policy = json.loads((ROOT / "policy" / "simple-deploy-v1.json").read_text(encoding="utf-8"))

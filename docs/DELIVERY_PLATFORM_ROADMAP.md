@@ -266,14 +266,25 @@ Current A1's final owner LIVE model remains historical/current-design behavior u
 
 ## 14. New-project default after platform acceptance
 
+Canonical bootstrap guide: `docs/SIMPLE_DEPLOY_BOOTSTRAP.md`.
+
+Contract-tested copyable source templates:
+
+```text
+templates/simple-deploy/.simple-deploy.json
+templates/simple-deploy/.github/workflows/simple-deploy.yml
+```
+
 A future compatible service should need approximately:
 
 ```text
 Dockerfile
 Compose production contract
 .simple-deploy.json
-.github/workflows/deploy.yml   # tiny caller only
+.github/workflows/simple-deploy.yml   # tiny caller only
 ```
+
+The caller template pins the reusable workflow to a reviewed immutable full commit SHA with a Renovate-compatible version comment. Before adoption, refresh that pin to the currently accepted shared revision; never replace it with mutable `@main`, a tag or a version branch.
 
 No new project should design another ordinary RPi5 deployment framework unless it provably cannot fit the accepted SIMPLE-DEPLOY profile.
 
@@ -286,7 +297,7 @@ The SIMPLE-DEPLOY phase is complete only when:
 - Weather canary proves end-to-end automatic ordinary release;
 - at least one non-Weather consumer proves reuse;
 - intended compatible existing services are migrated or explicitly classified non-compatible;
-- new compatible projects have a documented bootstrap template;
+- new compatible projects have a documented, contract-tested bootstrap template;
 - legacy per-project ordinary deployment frameworks are marked historical/superseded after migration receipts;
 - ordinary release UX is stable enough to make #96 the next platform priority.
 

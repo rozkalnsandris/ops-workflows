@@ -117,3 +117,60 @@ jobs:
                   raise SystemExit(f'missing policy section: {marker}')
           print('FAST_LANE_POLICY=PASS')
           PY
+
+  agent-work-cycle-policy:
+    name: Agent Work Cycle command contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate copyable final-command contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          policy = json.loads(Path('policy/agent-work-cycle-v1.json').read_text(encoding='utf-8'))
+          contract = policy.get('next_command_contract', {})
+
+          if contract.get('final_command_must_be_sole_content_of_own_fenced_block') is not True:
+              raise SystemExit('final command fenced-block invariant changed')
+          if contract.get('final_command_fence_language') != 'text':
+              raise SystemExit('final command fence language changed')
+          if contract.get('final_command_forbidden_renderings') != [
+              'PROSE',
+              'INLINE_CODE',
+              'LIST_ITEM',
+              'QUOTE',
+              'UNFENCED_PLAIN_TEXT',
+          ]:
+              raise SystemExit('final command forbidden-renderings contract changed')
+
+          required_families = {
+              'ACTION_REQUIRED_AUTHORIZATION',
+              'NEXT_COMMAND',
+              'MERGE',
+              'AUTHORIZE',
+              'START',
+              'SYNC',
+              'TURPINI',
+              'EQUIVALENT_EXACT_OWNER_COMMAND',
+          }
+          if set(contract.get('operator_command_families', [])) != required_families:
+              raise SystemExit('operator command family coverage changed')
+
+          marker = 'must be the sole content of its own fenced `text` code block'
+          doc = Path('docs/AGENT_WORK_CYCLE_V1.md').read_text(encoding='utf-8')
+          agents = Path('AGENTS.md').read_text(encoding='utf-8')
+          if marker not in doc or marker not in agents:
+              raise SystemExit('human/managed contract missing fenced text invariant')
+          if 'fenced `bash` block' in agents:
+              raise SystemExit('conflicting bash final-command presentation remains')
+
+          print('AGENT_WORK_CYCLE_FINAL_COMMAND=PASS')
+          PY
+

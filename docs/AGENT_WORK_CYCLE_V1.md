@@ -109,7 +109,9 @@ STATE: <one-line state>
 EVIDENCE: <up to four decisive facts, when needed>
 DONE: <what completed, when useful>
 NOT DONE / BLOCKER: <only when applicable>
+```
 
+```text
 <exactly one final copy-pasteable next command>
 ```
 
@@ -119,7 +121,7 @@ Do not replay long history during normal START/SYNC/turpini. If immediately exec
 
 ## Exact Next Command Contract
 
-Every user-visible terminal/status response for repository work ends with exactly one copy-pasteable command, as its final actionable content.
+Every user-visible terminal/status response for repository work ends with exactly one copy-pasteable command, as its final actionable content. The final operator command — including `ACTION REQUIRED` authorization, `NEXT COMMAND`, `MERGE`, `AUTHORIZE`, `START`, `SYNC`, `turpini`, or any equivalent exact owner command — must be the sole content of its own fenced `text` code block. Never render the final command as prose, inline code, a list item, a quote, or unfenced/plain text. The `ACTION REQUIRED` label, when applicable, stays outside the command block.
 
 1. Genuine owner gate exists -> `ACTION REQUIRED` with the exact current authorization command and bindings.
 2. No owner gate; mutable GitHub/external state must change before work can continue -> `SYNC <repo>`.

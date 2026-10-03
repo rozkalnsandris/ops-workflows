@@ -114,7 +114,12 @@
       "TURPINI_WHEN_EXECUTION_BOUNDARY_PAUSES_WITH_SAFE_SAME_SCOPE_WORK_REMAINING",
       "START_REPO_WHEN_CURRENT_OUTCOME_IS_DONE"
     ],
-    "never_implies_merge_or_live_authority": true
+    "never_implies_merge_or_live_authority": true,
+    "prefer_minimal_command_text": true,
+    "omit_redundant_inherited_policy_clauses": true,
+    "preserve_full_sha_when_exact_binding_required": true,
+    "do_not_remove_required_target_risk_or_recovery_binding": true,
+    "long_form_only_when_extra_authority_or_recovery_semantics_require_it": true
   },
   "rollout_repositories": [
     "rozkalnsandris/ops-workflows",

@@ -184,6 +184,8 @@ Shared GitHub API access contract: `docs/GITHUB_API_ACCESS_V1.md` with machine i
 
 Every user-visible work-cycle response that ends or pauses repository work must finish with exactly one copy-pasteable command as the final actionable content. That final operator command — including `ACTION REQUIRED` authorization, `NEXT COMMAND`, `MERGE`, `AUTHORIZE`, `START`, `SYNC`, `turpini`, or any equivalent exact owner command — must be the sole content of its own fenced `text` code block. Never emit the final command as prose, inline code, a list item, a quote, or unfenced/plain text.
 
+Keep the final operator command as short as safely possible. Omit inherited/default safety clauses, exclusions, and routine revalidation steps that are already mandatory under the current repository and shared policy. Include only the operation, scope/target, and bindings needed for the owner's actual decision. Preserve a full immutable SHA whenever exact identity binding is required; never shorten away a required target, SHA, risk-class, or recovery binding. Longer commands are appropriate only when extra authority or recovery semantics must be made explicit.
+
 - Use `ACTION REQUIRED` only for a genuine owner authorization/decision gate; never manufacture a gate merely to satisfy this presentation rule.
 - When a real owner gate exists, output the exact authorization command with current issue/PR identifiers and exact SHA/target bindings where applicable.
 - When no owner gate exists and mutable GitHub/external state must be refreshed, output `SYNC ops-workflows`.

@@ -141,6 +141,16 @@ jobs:
               raise SystemExit('final command fenced-block invariant changed')
           if contract.get('final_command_fence_language') != 'text':
               raise SystemExit('final command fence language changed')
+          compact_expected = {
+              'prefer_minimal_command_text': True,
+              'omit_redundant_inherited_policy_clauses': True,
+              'preserve_full_sha_when_exact_binding_required': True,
+              'do_not_remove_required_target_risk_or_recovery_binding': True,
+              'long_form_only_when_extra_authority_or_recovery_semantics_require_it': True,
+          }
+          for key, value in compact_expected.items():
+              if contract.get(key) is not value:
+                  raise SystemExit(f'compact final-command invariant changed: {key}')
           if contract.get('final_command_forbidden_renderings') != [
               'PROSE',
               'INLINE_CODE',
@@ -164,10 +174,13 @@ jobs:
               raise SystemExit('operator command family coverage changed')
 
           marker = 'must be the sole content of its own fenced `text` code block'
+          compact_marker = 'Keep final operator commands minimal without weakening the authorization binding.'
           doc = Path('docs/AGENT_WORK_CYCLE_V1.md').read_text(encoding='utf-8')
           agents = Path('AGENTS.md').read_text(encoding='utf-8')
           if marker not in doc or marker not in agents:
               raise SystemExit('human/managed contract missing fenced text invariant')
+          if compact_marker not in doc or 'Keep the final operator command as short as safely possible.' not in agents:
+              raise SystemExit('human/managed contract missing compact-command invariant')
           if 'fenced `bash` block' in agents:
               raise SystemExit('conflicting bash final-command presentation remains')
 

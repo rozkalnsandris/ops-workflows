@@ -201,6 +201,8 @@ jobs:
           docker buildx build \
             --platform "${ARCHITECTURE}" \
             --file "${DOCKERFILE}" \
+            --cache-from "type=registry,ref=${IMAGE}:production" \
+            --cache-to "type=inline" \
             --label "org.opencontainers.image.revision=${SOURCE_SHA}" \
             --label "io.rozkalns.simple-deploy.target=${TARGET_ALIAS}" \
             --label "io.rozkalns.simple-deploy.shared-revision=${SHARED_SHA}" \

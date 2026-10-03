@@ -162,6 +162,8 @@ That exact resolved digest is the deployment identity. The source-SHA tag is use
 
 The image also receives public-safe OCI labels for the consumer source SHA, target alias and accepted shared workflow revision.
 
+BuildKit may import inline cache metadata from the caller-bound `:production` image and export fresh inline cache metadata into the newly published exact-SHA image. This cache is an optimization only: it never changes the source-SHA binding, immutable digest identity, promotion checks or trusted-runtime target selection. Missing or unusable cache must degrade to a normal build rather than create a separate deployment path.
+
 ## 7. Production pointer is discovery only
 
 The stable pointer is:

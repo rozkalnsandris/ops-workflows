@@ -123,6 +123,8 @@ Do not replay long history during normal START/SYNC/turpini. If immediately exec
 
 Every user-visible terminal/status response for repository work ends with exactly one copy-pasteable command, as its final actionable content. The final operator command — including `ACTION REQUIRED` authorization, `NEXT COMMAND`, `MERGE`, `AUTHORIZE`, `START`, `SYNC`, `turpini`, or any equivalent exact owner command — must be the sole content of its own fenced `text` code block. Never render the final command as prose, inline code, a list item, a quote, or unfenced/plain text. The `ACTION REQUIRED` label, when applicable, stays outside the command block.
 
+Keep final operator commands minimal without weakening the authorization binding. Do not restate standing policy defaults such as ordinary no-LIVE/no-secrets/no-settings exclusions, routine fresh-state checks, or fail-closed behavior when those rules already apply from the current repository/shared contract. Include only the operation, repository/item/target, and any exact binding or exception the owner is actually approving. Full immutable SHAs remain required wherever exact identity matters; recovery/LIVE commands may be longer when additional authority must be explicit.
+
 1. Genuine owner gate exists -> `ACTION REQUIRED` with the exact current authorization command and bindings.
 2. No owner gate; mutable GitHub/external state must change before work can continue -> `SYNC <repo>`.
 3. No owner gate; the current execution boundary pauses while same-scope safe technical continuation remains -> `turpini`.

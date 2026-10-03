@@ -155,6 +155,13 @@ class SimpleDeployContractTests(unittest.TestCase):
         self.assertIn("contents: read", caller)
         self.assertIn("packages: write", caller)
 
+    def test_shared_build_uses_non_authoritative_inline_registry_cache(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "simple-deploy.yml").read_text(encoding="utf-8")
+        self.assertIn('--cache-from "type=registry,ref=${IMAGE}:production"', workflow)
+        self.assertIn('--cache-to "type=inline"', workflow)
+        self.assertIn('--tag "${IMAGE}:${SOURCE_SHA}"', workflow)
+        self.assertIn('"${IMAGE}@${DIGEST}"', workflow)
+
     def test_policy_forbids_runtime_credentials_and_sensitive_mutation(self) -> None:
         policy = json.loads((ROOT / "policy" / "simple-deploy-v1.json").read_text(encoding="utf-8"))
         self.assertFalse(policy["registry"]["workflow_accepts_runtime_registry_credentials"])

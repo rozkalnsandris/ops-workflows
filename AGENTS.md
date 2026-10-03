@@ -69,7 +69,7 @@ The core operating rule is:
 - Candidate verification must prove that the observed candidate identity equals the exact uploaded artifact/version identity. HTTP success alone is insufficient when routing can fall back to another active version.
 - When a platform requires the candidate to be attached to the active deployment before exact-version verification, a pre-enumerated zero-normal-traffic attachment plus later promotion may share one Composite Live owner gate. Both remain separate live mutations and must be counted and bounded in the authorization envelope.
 - Authorization is consumed when the first authorized mutation starts. After that, error, ambiguity, drift, or new risk means preserve evidence and STOP; do not automatically retry, rollback, clean up, rebase, reset, or choose an alternate mutation path unless that behavior was explicitly pre-authorized.
-- When an owner decision remains, report status first and place one visible `ACTION REQUIRED` section at the end, using a copyable fenced `bash` block when practical.
+- When an owner decision remains, report status first and place one visible `ACTION REQUIRED` section at the end. The exact owner command must be the sole content of its own fenced `text` code block; do not emit it as prose, inline code, a list item, a quote, or unfenced/plain text.
 - Merge remains explicit owner authority. Merge does not authorize deployment or any other live mutation.
 
 Repository-local stricter rules in consuming projects override this shared baseline.
@@ -182,7 +182,7 @@ Shared GitHub API access contract: `docs/GITHUB_API_ACCESS_V1.md` with machine i
 
 ### Terminal response — exact next command
 
-Every user-visible work-cycle response that ends or pauses repository work must finish with exactly one copy-pasteable command as the final actionable content.
+Every user-visible work-cycle response that ends or pauses repository work must finish with exactly one copy-pasteable command as the final actionable content. That final operator command — including `ACTION REQUIRED` authorization, `NEXT COMMAND`, `MERGE`, `AUTHORIZE`, `START`, `SYNC`, `turpini`, or any equivalent exact owner command — must be the sole content of its own fenced `text` code block. Never emit the final command as prose, inline code, a list item, a quote, or unfenced/plain text.
 
 - Use `ACTION REQUIRED` only for a genuine owner authorization/decision gate; never manufacture a gate merely to satisfy this presentation rule.
 - When a real owner gate exists, output the exact authorization command with current issue/PR identifiers and exact SHA/target bindings where applicable.

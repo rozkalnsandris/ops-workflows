@@ -1,6 +1,6 @@
 {
   "schema": "rozkalns.github-first-rdc-fallback.v1",
-  "status": "SHARED_CONTRACT_PROPOSED",
+  "status": "NORMATIVE_WHEN_MERGED",
   "canonical_repository": "rozkalnsandris/ops-workflows",
   "parent_document": "docs/AGENT_WORK_CYCLE_V1.md",
   "normative_document": "docs/GITHUB_FIRST_RDC_FALLBACK_V1.md",

@@ -1,6 +1,6 @@
 # GitHub-first / RDC fallback v1
 
-Status: shared governance proposal (effective only after merge and explicit consumer adoption)
+Status: normative for ops-workflows upon merge; consumers adopt the accepted revision separately
 Canonical repository: `rozkalnsandris/ops-workflows`
 Parent: `docs/AGENT_WORK_CYCLE_V1.md`
 Machine contract: `policy/github-first-rdc-fallback-v1.json`

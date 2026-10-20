@@ -1,0 +1,50 @@
+name: GitHub-first / RDC fallback contract
+
+on:
+  pull_request:
+    paths:
+      - "docs/GITHUB_FIRST_RDC_FALLBACK_V1.md"
+      - "docs/AGENT_WORK_CYCLE_V1.md"
+      - "policy/github-first-rdc-fallback-v1.json"
+      - "policy/agent-work-cycle-v1.json"
+      - "tests/github_first_rdc/**"
+      - "AGENTS.md"
+      - "README.md"
+      - ".github/workflows/github-first-rdc-policy-gate.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/GITHUB_FIRST_RDC_FALLBACK_V1.md"
+      - "docs/AGENT_WORK_CYCLE_V1.md"
+      - "policy/github-first-rdc-fallback-v1.json"
+      - "policy/agent-work-cycle-v1.json"
+      - "tests/github_first_rdc/**"
+      - "AGENTS.md"
+      - "README.md"
+      - ".github/workflows/github-first-rdc-policy-gate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-first-rdc-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate JSON and test decision matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m json.tool policy/github-first-rdc-fallback-v1.json >/dev/null
+          python3 -m unittest -v tests.github_first_rdc.test_policy

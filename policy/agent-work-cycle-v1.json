@@ -55,7 +55,16 @@
       "GITHUB"
     ],
     "rdc_is_execution_transport_not_source_or_authorization_authority": true,
-    "rdc_never_widens_authorization": true
+    "rdc_never_widens_authorization": true,
+    "detailed_machine_contract": "policy/github-first-rdc-fallback-v1.json",
+    "github_required_when_equivalent_capability_exists": true,
+    "github_hosted_ci_preferred_for_safe_source_tests": true,
+    "rdc_capability_gap_evidence_required": true,
+    "rdc_host_step_must_be_authorized": true,
+    "github_tool_error_is_not_rdc_fallback": true,
+    "rdc_for_convenience_allowed": false,
+    "post_github_write_error_rdc_duplicate_allowed": false,
+    "consumer_activation_requires_explicit_adoption": true
   },
   "owner_gates": {
     "merge_explicit_by_default": true,

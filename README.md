@@ -22,6 +22,10 @@ It must not contain RPi5 production credentials, host mutation logic, systemd un
 
 The canonical automation master plan and host-control logic remain in `rozkalnsandris/RPi5_main`.
 
+## GitHub-first / RDC fallback
+
+All shared agent work must prefer GitHub tools and GitHub Actions. RDC is a documented, minimal, authorized fallback only when the exact step cannot be completed through GitHub; it is not a shortcut for source/branch/PR/CI work or a workaround for denied or ambiguous GitHub actions. Full normative rule: `docs/GITHUB_FIRST_RDC_FALLBACK_V1.md`; machine contract: `policy/github-first-rdc-fallback-v1.json`. Consumer repositories adopt separately under their own stricter rules.
+
 ## Delivery platform sequence
 
 Canonical cross-project sequencing is documented in:

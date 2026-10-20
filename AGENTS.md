@@ -163,6 +163,8 @@ Shared governance contract: `rozkalnsandris/ops-workflows/docs/AGENT_WORK_CYCLE_
 
 Shared GitHub API access contract: `docs/GITHUB_API_ACCESS_V1.md` with machine invariants in `policy/github-api-access-v1.json`. Normal GitHub retrieval is serial and minimum-sufficient by default; rate-limit handling never creates mutation retry authority.
 
+GitHub-first/RDC-fallback is mandatory for each work step: see `docs/GITHUB_FIRST_RDC_FALLBACK_V1.md` and `policy/github-first-rdc-fallback-v1.json`. Use supported GitHub operations and GitHub Actions first. RDC requires a proven capability gap, a minimal authorized host step and a documented exception; never use RDC for convenience or as a workaround for GitHub denial, rate-limit, error or uncertain write. Return to GitHub; stricter owner gates remain unchanged.
+
 ### Canonical state and minimum-sufficient retrieval
 
 - GitHub is canonical for mutable source, branch, SHA, issue/PR, CI/review and authorization-continuity state. Never reuse mutable state from chat history without a fresh read.

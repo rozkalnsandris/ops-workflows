@@ -65,14 +65,14 @@ The manifest must never substitute cached mutable SHA, PR, CI/review, mergeabili
 A missing manifest preserves the legacy repository-local startup path. If a manifest is malformed, stale, or references missing canonical surfaces, fall back to unambiguous repository-local rules; if routing is also ambiguous, fail closed and STOP rather than selecting a less strict interpretation.
 
 ## GitHub-first tool and transport priority
+GitHub-first is mandatory tool priority, not a preference or the distinct deferred-LIVE `GITHUB-ONLY` mode. Detailed normative contract: `docs/GITHUB_FIRST_RDC_FALLBACK_V1.md`; machine invariants: `policy/github-first-rdc-fallback-v1.json`.
 
-GitHub is the default control, read and write surface whenever repository/source work can be completed through connected GitHub tooling with equivalent correctness and evidence. Do not use RDC, SSH, a local checkout, shell `git`, `gh`, or `curl` merely as a substitute for supported GitHub-native operations.
+For each individual step use connected GitHub operations for files, source edits, branches/commits, issues, PRs, reviews, checks and canonical continuity whenever equivalent correctness/evidence is available. For source tests prefer safe GitHub-hosted CI when available. Convenience, familiarity and speed do not permit RDC, SSH, host checkout, shell `git`/`gh`/`curl` substitution.
 
-Use RDC/host shell only for the smallest step that genuinely requires execution or observation on the RPi5/host and cannot be obtained through GitHub, such as host/runtime evidence, local filesystem/process state, `sudo`/root, systemd, Docker, packages, networking, mounts, permissions/ownership, or another command that must execute on that host.
+RDC is only a bounded exception for a proven operation-specific GitHub capability gap that cannot be covered by GitHub-hosted CI and is appropriate on the authorized host. Before RDC, record what GitHub capability was checked, the exact blocker, the necessary host-local operation and existing authorization. Host/runtime observation (systemd, Docker, processes, devices and filesystem) is typical; source/PR/CI work returns immediately to GitHub. Follow **GitHub -> minimal required RDC -> GitHub**.
 
-When a task spans both surfaces, use **GitHub -> minimal required RDC/host step -> GitHub**. Return to GitHub for canonical source, branches/commits/PRs, issues, CI/reviews and durable continuity/evidence. RDC is execution/transport only and never source-of-truth or authorization authority.
+A GitHub access denial, rate-limit, error, timeout or uncertain mutation result is never RDC fallback or new retry authority; preserve minimal evidence and STOP. RDC does not grant source, merge, LIVE, settings, credentials, permission or cleanup/rollback authority. Repository-local stricter rules always win. Shared policy does not automatically activate consumers.
 
-Choosing RDC never widens owner-authorized mutation classes, targets, protected-data access, retry/rollback/cleanup authority, merge authority, repository-settings authority, or secrets/permissions authority. Repository-local stricter runtime and protected-data rules always win.
 
 ## GitHub API access and rate-limit discipline
 

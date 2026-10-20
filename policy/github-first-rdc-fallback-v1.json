@@ -1,0 +1,148 @@
+{
+  "schema": "rozkalns.github-first-rdc-fallback.v1",
+  "status": "NORMATIVE_WHEN_MERGED",
+  "canonical_repository": "rozkalnsandris/ops-workflows",
+  "parent_document": "docs/AGENT_WORK_CYCLE_V1.md",
+  "normative_document": "docs/GITHUB_FIRST_RDC_FALLBACK_V1.md",
+  "adoption": {
+    "consumer_repo_local_review_required": true,
+    "shared_merge_auto_activates_consumers": false,
+    "repo_local_stricter_rules_win": true,
+    "github_only_deferred_live_mode_is_distinct": true
+  },
+  "selection": {
+    "per_step_classification_required": true,
+    "order": [
+      "GITHUB_CONNECTED_TOOLS",
+      "GITHUB_HOSTED_CI_WHEN_APPLICABLE",
+      "MINIMAL_AUTHORIZED_RDC_IF_GITHUB_INCAPABLE",
+      "STOP"
+    ],
+    "github_capable_means_github_required": true,
+    "convenience_speed_or_habit_allows_rdc": false,
+    "github_native_operations": [
+      "REPOSITORY_FILE_READ_WRITE",
+      "SOURCE_CHANGE",
+      "BRANCH_CREATE",
+      "COMMIT",
+      "ISSUE",
+      "PULL_REQUEST",
+      "CI_STATUS",
+      "REVIEW",
+      "GITHUB_STATE",
+      "CANONICAL_CONTINUITY"
+    ],
+    "github_actions_preferred_for_safe_source_tests_when_available": true,
+    "rdc_never_replaces_supported_github_native_operation": true
+  },
+  "rdc_exception": {
+    "exact_github_capability_gap_required": true,
+    "github_ci_substitute_ruled_out_when_applicable": true,
+    "appropriate_host_local_step_required": true,
+    "narrowest_necessary_operation_only": true,
+    "owner_authority_for_actual_mutation_required": true,
+    "exception_record_required": true,
+    "expected_host_examples": [
+      "SYSTEMD",
+      "DOCKER_RUNTIME",
+      "HOST_PROCESS",
+      "HOST_FILESYSTEM",
+      "LOCAL_DEVICE",
+      "NETWORKING",
+      "MOUNTS",
+      "PACKAGES",
+      "OWNERSHIP"
+    ],
+    "before_and_after": [
+      "GITHUB",
+      "MINIMAL_RDC",
+      "GITHUB"
+    ],
+    "rdc_is_not_canonical_source_or_authorization": true
+  },
+  "exception_evidence_fields": [
+    "STEP",
+    "REPOSITORY_AND_TARGET",
+    "GITHUB_CAPABILITY_CHECKED",
+    "PRECISE_CAPABILITY_GAP",
+    "GITHUB_CI_NOT_EQUIVALENT_REASON",
+    "MINIMAL_RDC_OPERATION",
+    "EXISTING_AUTHORIZATION",
+    "GITHUB_RETURN_EVIDENCE"
+  ],
+  "guardrails": {
+    "github_access_denied_is_not_rdc_authority": true,
+    "github_rate_limit_is_not_rdc_authority": true,
+    "github_tool_error_is_not_rdc_authority": true,
+    "uncertain_github_mutation_must_stop": true,
+    "rdc_duplicate_github_mutation_allowed": false,
+    "no_implicit_merge_live_deploy_settings_secrets_or_permissions_authority": true,
+    "no_implicit_retry_rollback_cleanup_authority": true,
+    "no_protected_data_in_public_evidence": true
+  },
+  "decision_cases": [
+    {
+      "scenario": "SOURCE_EDIT_WITH_GITHUB_CAPABILITY",
+      "github_capable": true,
+      "github_ci_capable": false,
+      "host_only": false,
+      "github_error": false,
+      "authority": true,
+      "expected": "GITHUB"
+    },
+    {
+      "scenario": "CI_VALIDATION_WITH_GITHUB_ACTIONS",
+      "github_capable": false,
+      "github_ci_capable": true,
+      "host_only": false,
+      "github_error": false,
+      "authority": true,
+      "expected": "GITHUB_ACTIONS"
+    },
+    {
+      "scenario": "HOST_SYSTEMD_READ",
+      "github_capable": false,
+      "github_ci_capable": false,
+      "host_only": true,
+      "github_error": false,
+      "authority": true,
+      "expected": "RDC_EXCEPTION"
+    },
+    {
+      "scenario": "HOST_DOCKER_MUTATION_WITHOUT_LIVE_AUTH",
+      "github_capable": false,
+      "github_ci_capable": false,
+      "host_only": true,
+      "github_error": false,
+      "authority": false,
+      "expected": "STOP"
+    },
+    {
+      "scenario": "GITHUB_DENIED_OR_UNCERTAIN",
+      "github_capable": false,
+      "github_ci_capable": false,
+      "host_only": false,
+      "github_error": true,
+      "authority": true,
+      "expected": "STOP"
+    },
+    {
+      "scenario": "SOURCE_TOOL_UNAVAILABLE_WITHOUT_HOST_JUSTIFICATION",
+      "github_capable": false,
+      "github_ci_capable": false,
+      "host_only": false,
+      "github_error": false,
+      "authority": true,
+      "expected": "STOP"
+    },
+    {
+      "scenario": "RDC_CONVENIENCE_WHILE_GITHUB_CAPABLE",
+      "github_capable": true,
+      "github_ci_capable": false,
+      "host_only": true,
+      "github_error": false,
+      "authority": true,
+      "expected": "GITHUB"
+    }
+  ]
+}

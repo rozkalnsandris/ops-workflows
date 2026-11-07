@@ -28,7 +28,7 @@ jobs:
 
   fast-lane-policy:
     name: FAST-LANE policy contract
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Checkout exact source
@@ -120,7 +120,7 @@ jobs:
 
   agent-work-cycle-policy:
     name: Agent Work Cycle command contract
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Checkout exact source

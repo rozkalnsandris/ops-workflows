@@ -124,7 +124,11 @@ def validate_workflow_security(text: str, policy: dict) -> None:
 
     actionlint = static["actionlint"]
     require(f'ACTIONLINT_VERSION: "{actionlint["version"]}"' in text, "actionlint version drift")
-    require(actionlint["linux_amd64_archive_sha256"] in text, "actionlint checksum drift")
+    expected_image = f'{actionlint["image_repository"]}@{actionlint["linux_amd64_image_digest"]}'
+    require(f'ACTIONLINT_IMAGE: "{expected_image}"' in text, "actionlint image digest drift")
+    require("github.com/rhysd/actionlint/releases/download" not in text, "actionlint release download path must stay removed")
+    require("--network=none" in text, "actionlint container network isolation missing")
+    require('target=/repo,readonly' in text, "actionlint repository mount must stay read-only")
 
     zizmor = static["zizmor"]
     require(f'zizmorcore/zizmor-action@{zizmor["action_sha"]} # {zizmor["action_version"]}' in text, "zizmor action identity drift")

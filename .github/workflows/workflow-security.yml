@@ -21,12 +21,13 @@ jobs:
       - name: Pull pinned actionlint 1.7.12 image
         shell: bash
         env:
+          ACTIONLINT_VERSION: "1.7.12"
           ACTIONLINT_IMAGE: "rhysd/actionlint@sha256:9d36088643581e728c969f35141f88139fec77280b2be23c1f66f8e40e1025e7"
         run: |
           set -euo pipefail
           docker pull "$ACTIONLINT_IMAGE" >/dev/null
-          version="$(docker run --rm --network=none "$ACTIONLINT_IMAGE" -version)"
-          [[ "$version" == "1.7.12" || "$version" == "v1.7.12" ]]
+          version="$(docker run --rm --network=none "$ACTIONLINT_IMAGE" -version 2>&1)"
+          grep -Fq "$ACTIONLINT_VERSION" <<<"$version"
 
       - name: Lint GitHub Actions workflows
         shell: bash
